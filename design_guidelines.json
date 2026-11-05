@@ -1,0 +1,158 @@
+{
+  "app_name": "Bologna Monstri",
+  "personality": "7 Dark-First Utility",
+  "personality_one_liner": "A retro-inspired, dark-themed command center for capturing stereotypical creatures around Bologna, blending tactical mobile utility with 8-bit nostalgia.",
+  "color": {
+    "surface": "#121212",
+    "onSurface": "#f5f5f5",
+    "surfaceSecondary": "#1e1e1e",
+    "onSurfaceSecondary": "#e0e0e0",
+    "surfaceTertiary": "#2a2a2a",
+    "onSurfaceTertiary": "#d4d4d4",
+    "surfaceInverse": "#e0e0e0",
+    "onSurfaceInverse": "#121212",
+    "brand": "#d32f2f",
+    "brandPrimary": "#d32f2f",
+    "onBrandPrimary": "#ffffff",
+    "brandSecondary": "#fbc02d",
+    "onBrandSecondary": "#121212",
+    "brandTertiary": "#388e3c",
+    "onBrandTertiary": "#ffffff",
+    "success": "#388e3c",
+    "onSuccess": "#ffffff",
+    "warning": "#fbc02d",
+    "onWarning": "#121212",
+    "error": "#d32f2f",
+    "onError": "#ffffff",
+    "info": "#757575",
+    "onInfo": "#ffffff",
+    "border": "#333333",
+    "borderStrong": "#555555",
+    "divider": "#262626",
+    "muted": "#9e9e9e",
+    "onBrand": "#ffffff"
+  },
+  "typography": {
+    "displayFontFamily": "Space Mono",
+    "textFontFamily": "Space Mono",
+    "scale": {
+      "sm": 12,
+      "base": 14,
+      "lg": 16,
+      "xl": 20,
+      "2xl": 24
+    }
+  },
+  "spacing": {
+    "rule": "Generous spacing around map controls to prevent accidental touches. Thick retro borders instead of soft shadows.",
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "2xl": 32,
+    "3xl": 48
+  },
+  "radius_tokens": {
+    "sm": 2,
+    "md": 4,
+    "lg": 8,
+    "pill": 999
+  },
+  "shadow_tier": "0",
+  "navigation": "stack_only",
+  "icon_set": "MaterialCommunityIcons",
+  "glassmorphism": {
+    "enabled": false,
+    "do's": [],
+    "dont's": ["No glassmorphism. This is a retro 8-bit style dark utility UI. Use solid backgrounds with thick borders."]
+  },
+  "platform_libraries": {
+    "glass": {
+      "ios": "expo-glass-effect",
+      "android": "expo-blur",
+      "low_end_android_fallback": "solid surfaceSecondary"
+    },
+    "image": "expo-image",
+    "blur": "expo-blur",
+    "bottom_sheet": "@gorhom/bottom-sheet",
+    "animation": "react-native-reanimated",
+    "gesture": "react-native-gesture-handler"
+  },
+  "screens": [
+    {
+      "name": "Title Screen",
+      "purpose": "Landing screen with 'Inizia Avventura' (Start) and 'Accedi' (Login).",
+      "states": {
+        "loading": "Centered pixel art spinner.",
+        "empty": "N/A",
+        "error": "Error logging in, retry button."
+      },
+      "layout": "Full-bleed background image with a top gradient scrim to dark. Huge retro display font for the title 'Bologna Monstri'. Sticky buttons at the bottom. The UI should have 2pt strong borders reflecting brutalist/retro influence."
+    },
+    {
+      "name": "Map Overworld",
+      "purpose": "The main exploration screen across 5 Italian towns with D-pad controls.",
+      "states": {
+        "loading": "Loading map tiles.",
+        "empty": "N/A",
+        "error": "Failed to load map data."
+      },
+      "layout": "Top info band (15% height) showing Player Team health and current Town (Bologna, Imola, etc.). Center (flex: 1) is the tile map rendering. Bottom area (30% height) contains a large D-pad on the left (25% screen width) and A/B interact context buttons on the right. Solid dark backgrounds for control areas, separating them clearly from the map."
+    },
+    {
+      "name": "Battle Screen",
+      "purpose": "Turn-based combat encounter with wild monsters or NPCs.",
+      "states": {
+        "loading": "Transitioning to battle scene.",
+        "empty": "N/A",
+        "error": "Battle sync error."
+      },
+      "layout": "Top area: Opponent info (HP bar, Name). Center: Battle visual scene. Bottom area: A sticky command center using a 2x2 grid for Actions: 'Lotta' (Attack), 'Cattura' (Catch), 'Mostri' (Switch), 'Fuga' (Flee). Tapping 'Lotta' opens a slide-in bottom sheet with 4 specific moves. High contrast, sharp corners, instant transitions."
+    },
+    {
+      "name": "Mostrario",
+      "purpose": "Bestiary showing captured Italian stereotypical monsters.",
+      "states": {
+        "loading": "Loading mostri data.",
+        "empty": "Empty state illustration of a notebook: 'Nessun mostro catturato. Esplora l'Emilia-Romagna!'",
+        "error": "Failed to fetch Mostrario."
+      },
+      "layout": "Grid list (2 columns) of captured monsters. Each card has a surfaceSecondary background, a 1pt border, and a center monster icon. A sticky filter bar at the top."
+    }
+  ],
+  "images": {
+    "title_background": {
+      "url": "https://images.unsplash.com/photo-1550745165-9bc0b252726f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxOTF8MHwxfHNlYXJjaHwxfHxyZXRybyUyMDglMjBiaXQlMjBnYW1lfGVufDB8fHx8MTc5Mzg5NTc5Mnww&ixlib=rb-4.1.0&q=85",
+      "alt": "Retro 8-bit game console scene in dark lighting"
+    },
+    "town_bologna_reference": {
+      "url": "https://images.unsplash.com/photo-1635469019177-7264fc1e013c?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxNzV8MHwxfHNlYXJjaHwxfHxpdGFsaWFuJTIwdG93biUyMGJvbG9nbmF8ZW58MHx8fHwxNzkzODk1NzkyfDA&ixlib=rb-4.1.0&q=85",
+      "alt": "Italian town Bologna cityscape"
+    },
+    "battle_scene_placeholder": {
+      "url": "https://images.unsplash.com/photo-1650963310446-011fc6a28367?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA3MDB8MHwxfHNlYXJjaHwxfHxwaXhlbCUyMGFydCUyMGJhY2tncm91bmR8ZW58MHx8fHwxNzkzODk1NzkyfDA&ixlib=rb-4.1.0&q=85",
+      "alt": "Pixel art pink clouds background"
+    }
+  },
+  "haptics": {
+    "events": {
+      "d_pad_press": "light",
+      "action_button_press": "medium",
+      "battle_attack": "heavy",
+      "catch_success": "success",
+      "catch_fail": "error",
+      "menu_toggle": "selection"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Build an ORIGINAL monster-collecting tile-map RPG named 'Bologna Monstri'. Do NOT use any Nintendo IP or copyrighted names. Generate unique local Italian stereotypical characters and creatures based around Bologna, Imola, Ferrara, etc.",
+    "Use 'Space Mono' or a system monospace font to emulate a modern pixel aesthetic without relying on external font files if they fail to load.",
+    "The UI should follow a 'Dark-First Utility' style mixed with brutalist 8-bit retro vibes. DO NOT use rounded corners (radius > 8), and absolutely no glassmorphism or blur. Use solid dark backgrounds (#121212) with contrasting thick borders (#333333 or #555555).",
+    "NO BLUE OR PURPLE ALLOWED. Stick strictly to the provided color palette (Dark Charcoal, Deep Crimson, Warning Yellow, Saturated Green).",
+    "Implement a D-Pad control system on the bottom left of the Map Overworld screen. Ensure the hit targets are at least 56x56pt for comfortable mobile gaming.",
+    "Battle Screen must be turn-based: Layout the commands 'Lotta' (Attack), 'Cattura' (Catch), 'Mostri' (Switch), and 'Fuga' (Flee) in a sticky bottom container. They should be large, thumb-friendly buttons.",
+    "Apply 'gradient-to-dark scrim' on any image backgrounds (like the Title Screen) to guarantee readability for overlying text.",
+    "Wire haptics on all D-Pad movements and battle action clicks as specified."
+  ]
+}
