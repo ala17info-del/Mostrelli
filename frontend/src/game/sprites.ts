@@ -5,6 +5,7 @@ export const PAL: Record<string, string> = {
   B: "#4e2e18", s: "#9e9e9e", S: "#616161", c: "#cfd8dc", m: "#7b1f3a",
   t: "#8d6e63", e: "#f3e3b5", n: "#263238", h: "#ffcc80",
   A: "#c0392b", C: "#4caf50",
+  z: "#ffb300", v: "#7e57c2", l: "#b3e5fc", d: "#7f1d1d",
 };
 
 export const SPRITES: Record<string, string[]> = {
@@ -125,6 +126,19 @@ export const SPRITES: Record<string, string[]> = {
   scooterone: ["............", "........kk..", ".......kSk..", "..kkkkkkSk..", ".krrrrrrrk..", "krrwrrrrrrk.", "krrnrrrrrrrk", "kkkkkkkkkkkk", ".kSk....kSk.", "kSnSk..kSnSk", ".kSk....kSk.", "............"],
   cappellaccio: ["............", "....kkkk....", "...kooook...", "..kooyyook..", ".kooooooook.", "koownoownook", "kooooooooook", "kooorrrroook", ".kooooooook.", "..kkkkkkkk..", "....gg......", "............"],
   zuppone: ["............", "...kkkkkk...", "..kppppppk..", ".kppwppwppk.", ".kppnppnppk.", ".keeeeeeeek.", ".kyyyyyyyyk.", ".kPPPPPPPPk.", ".kppkkkkppk.", ".kppppppppk.", "..kkkkkkkk..", "............"],
+  // --- Iteration 7: unique evolved forms (16x16)
+  mortadellone: ["................", "..kkk......kkk..", ".kPpPk....kPpPk.", ".kppPkkkkkkPppk.", "kppppppppppppppk", "kpwppgppppwppgpk", "kppwnppppppwnppk", "kpppppkkkkpppppk", "kpgppkPPPPkppgpk", "kppppkPkkPkppppk", "kpwpppkkkkpppwpk", "kppprrrrrrrrpppk", ".kppprryyrrpppk.", "..kkppppppppkk..", ".kPPk......kPPk.", ".kkkk......kkkk."],
+  squacquerona: ["...z...zz...z...", "...zzzzzzzzzz...", "..kkkkkkkkkkkk..", ".kwwwwwwwwwwwwk.", "kwwwwwwwwwwwwwwk", "kwwwnwwwwwwnwwwk", "kwwwnwwwwwwnwwwk", "kwwpwwwwwwwwpwwk", "kwwwwwkkkkwwwwwk", "kewwwwwrrwwwwwek", "keewwwwwwwwwweek", "keeewwwwwwwweeek", ".keeeeeeeeeeeek.", "kooooooooooooook", ".kooeooeooeoook.", "..kkkkkkkkkkkk.."],
+  passatellaccio: ["...c......c.....", "....c....c......", "..........kkkk..", ".........kownok.", ".........koooook", "..kkkkk...kook..", ".kooooook.kook..", "kookkkkook.kook.", "kok....kook.kok.", "kook....koooook.", ".kooookkooookk..", "..kkkkkkkkkkk...", "kcccccccccccccck", ".kssssssssssssk.", "..kssssssssssk..", "....kkkkkkkk...."],
+  piadinazza: ["................", "....kkkkkkkk....", "...keeoeeoeek...", "..keoeeeeeeoek..", ".kggrggrrggrggk.", ".keeeeoeeeoeeek.", "keoeeeeeeeeeoeek", "kkkkkkkkkkkkkkkk", "kgwnk.kgggk.kggk", "kggkk.kgggk.kggk", ".kk...kgggk..kk.", "......kgggk.....", "......kkkkk.....", "................", "................", "................"],
+  zanzarazza: ["......z..z......", "......zzzz......", "ll...kkkkkk...ll", "lll.kvrvvrvk.lll", ".lllkvvvvvvklll.", "..llkkvkkvkkll..", "...lkvvnnvvkl...", "....kvSvvSvk....", "...kvvSvvSvvk...", "...kvSvvvvSvk...", "....kvvSSvvk....", "....kvSvvSvk....", ".....kvvvvk.....", "...k..kvvk..k...", "..k...k..k...k..", ".k....k..k....k."],
+  turbonzo: ["................", ".kkkkkk.........", ".kSSSSk.........", "...kk...kkkk....", "...kk.kkrrrrkk..", "..kkkkrrrrwwrrk.", ".krrrrrrrrwnrrrk", "krryyrrrrrrrrrrk", "krrrrrrrrrrrrrrk", "kyyyyyyyyyyyyyyk", "ookkSSkkkkkkSSkk", "o.kSnnSk..kSnnSk", "...kSSk....kSSk.", "....kk......kk..", "................", "................"],
+  vaporiera: [".......oo.......", "......oyyo......", ".......kk.......", "c....kwwwwk....c", "cc..kwnwwnwk..cc", "ccc.kwwyywwk.ccc", "cwcckwwwwwwkccwc", ".cwwckwwwwkcwwc.", "..cwwkwwwwkwwc..", "...ckwwwwwwkc...", "....kcwwwwck....", ".....kcwwck.....", "....ko.kk.ok....", "...c..c..c..c...", "....c..cc..c....", "................"],
+  tandemone: ["................", "..kkk.....kkk...", ".kgwgk...kgwgk..", ".kgnggk..kgnggk.", "..kgk.....kgk...", "..kgkkkkkkkgk...", "...kggggggggk...", "..kkkkgkkkgkkk..", ".kSSk.k..k.kSSk.", "kS..Sk.kk.kS..Sk", "kS.zSkkkkkkSz.Sk", "kS..Sk....kS..Sk", ".kSSk......kSSk.", "..kk........kk..", "................", "................"],
+  crescentone: ["................", "....kkkkkkkk....", "..kkeeoeeeoekk..", ".keeeeeeeeeeeek.", "keeoeeeeeeeeoeek", "keewnkeeeewnkeek", "keeeeeeeeeeeeeek", "keeeerrrrrreeeek", "kppppppppppppppk", "kpgppwppppgppwpk", "krrrdrrrrdrrrrdk", "keeeeeeeeeeeeeek", "keoeeeeoeeeeoeek", ".keeeeeeeeeeeek.", "..kkkkkkkkkkkk..", "................"],
+  gabbianazzo: ["................", ".....kkkkk......", "....kwwwwwk.....", "...kwnnnnwwk....", "...kwwwwwwwyyyk.", "...kwwwwwwkkkk..", "..kSwwwwwwk.....", ".kSSwwwwwwwk....", "kSSSwwwwwwwwk...", "kSSSSwwwwwwwwk..", ".kSSSwwwwwwwwk..", "..kSSwwwwwwwk...", "...kkwwwwwkk....", ".....kykyk......", "....kyk.kyk.....", "...kkk..kkk....."],
+  lambruscone: ["......kkkk......", "......kbbk......", "......kmmk......", ".c....kmmk....c.", "....kkmmmmkk....", "...kmmmmmmmmk...", "..kmmwnmmwnmmk..", ".kmmmmmmmmmmmmk.", ".kmmmPkkkkPmmmk.", "kyyyyyyyyyyyyyyk", "kybybybybybybybk", "kyyyyyyyyyyyyyyk", "kbybybybybybybyk", ".kyyyyyyyyyyyyk.", "..kkkkkkkkkkkk..", "c..c........c..c"],
+  zuppissima: [".......rr.......", "......krrk......", "...kkkkwwkkkk...", "..kwwwwwwwwwwk..", ".kwwwnwwwwnwwwk.", ".kwwwwwrrwwwwwk.", ".kppppppppppppk.", ".kyyyyyyyyyyyyk.", ".kPPPPPPPPPPPPk.", "..kppppppppppk..", "..kyyyyyyyyyyk..", "..kPPPPPPPPPPk..", "...kppppppppk...", "....kkkkkkkk....", "......kssk......", "....kssssssk...."],
   vasetto: ["............", "...kkkkkk...", "...kSSSSk...", "..kkkkkkkk..", "..kcwcccck..", ".kcwcccccck.", ".kcwcccccck.", ".kcccccccck.", ".kcccccccck.", "..kccccck...", "...kkkkkk...", "............"],
   person_back: [
     "...kkkkkk...", "..kAAAAAAk..", ".kAAAAAAAAk.", "..kBBBBBBk..", "..kBBBBBBk..", "..kkBBBBkk..",
@@ -138,20 +152,4 @@ export const SPRITES: Record<string, string[]> = {
     "...kkkkkk...", "..kAAAAAAk..", ".kAAAAAAAAk.", "..khhhhhhk..", "..khnhhnhk..", "..khhhhhhk..",
     "..kkCCCCkk..", ".khCCCCCChk.", ".khCCCCCChk.", "..kSSSSSSk..", "..kSk..kSk..", "..kkk..kkk..",
   ],
-};
-
-// Evolved forms that reuse a base drawing with a new palette.
-export const SKINS: Record<string, { base: string; look: Record<string, string> }> = {
-  mortadellone: { base: "mortazzone", look: {"p": "#e57373", "P": "#b71c1c", "w": "#fff3e0", "g": "#1b5e20"} },
-  squacquerona: { base: "squacquerone", look: {"w": "#fff59d", "e": "#ff8f00", "n": "#1b5e20", "k": "#5d4037"} },
-  passatellaccio: { base: "passatellone", look: {"o": "#c77800", "c": "#ffe0b2"} },
-  piadinazza: { base: "piadinone", look: {"e": "#ffe082", "o": "#8d4e00", "g": "#1b5e20"} },
-  zanzarazza: { base: "zanzarone", look: {"S": "#7e57c2", "c": "#e1f5fe", "n": "#ff1744", "k": "#311b92"} },
-  turbonzo: { base: "pistonzo", look: {"r": "#ffeb3b", "s": "#212121", "S": "#b71c1c"} },
-  vaporiera: { base: "vaporella", look: {"w": "#e0f7fa", "c": "#80deea", "o": "#ff7043"} },
-  tandemone: { base: "biciclone", look: {"g": "#c62828", "S": "#fbc02d"} },
-  crescentone: { base: "crescentino", look: {"e": "#ffcc80", "o": "#bf360c", "r": "#e91e63"} },
-  gabbianazzo: { base: "gabbianone", look: {"w": "#eceff1", "S": "#263238", "y": "#ff6f00"} },
-  lambruscone: { base: "lambruschino", look: {"m": "#d81b60", "P": "#ff80ab", "k": "#560027"} },
-  zuppissima: { base: "zuppone", look: {"p": "#f06292", "y": "#ffd54f", "P": "#880e4f"} },
 };

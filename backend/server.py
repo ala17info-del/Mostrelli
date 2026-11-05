@@ -33,6 +33,7 @@ INDEXES: dict[str, list[IndexModel]] = {
     "users": [IndexModel([("email", ASCENDING)], name="email", unique=True), IndexModel([("apple_sub", ASCENDING)], name="apple_sub", unique=True, sparse=True)],
     "saves": [IndexModel([("user_id", ASCENDING)], name="user_id", unique=True)],
     "duels": [IndexModel([("code", ASCENDING)], name="code", unique=True), IndexModel([("user_id", ASCENDING), ("created_at", ASCENDING)], name="user_created")],
+    "live_duels": [IndexModel([("code", ASCENDING)], name="code", unique=True), IndexModel([("expires_at", ASCENDING)], name="ttl", expireAfterSeconds=0)],
 }
 
 
@@ -264,6 +265,138 @@ async def duel_result(code: str, body: DuelResult, user: dict = Depends(current_
     if res.modified_count == 0:
         return {"ok": True, "counted": False}
     return {"ok": True}
+
+
+# --- Live duels: both players pick an action each turn; when both are in, the turn is sealed with a
+# shared random seed so both clients resolve it identically.
+class LiveIn(BaseModel):
+    name: str = Field(min_length=1, max_length=20)
+    party: list[dict[str, Any]] = Field(min_length=1, max_length=6)
+
+
+class LiveAction(BaseModel):
+    turn: int = Field(ge=0)
+    kind: str = Field(pattern="^(move|switch|item|forfeit)$")
+    move: Optional[str] = Field(default=None, max_length=30)
+    idx: Optional[int] = Field(default=None, ge=0, le=5)
+    item: Optional[str] = Field(default=None, pattern="^(brodino|tortellini|digestivo|gelato|caffe)$")
+
+
+def clean_party(party: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    out = []
+    for i, m in enumerate(party):
+        s, lv = m.get("s"), m.get("lv")
+        if s not in SPECIES_IDS or not isinstance(lv, int) or isinstance(lv, bool) or not 1 <= lv <= 50:
+            raise HTTPException(status_code=422, detail="Squadra non valida")
+        out.append({"uid": f"m{i}", "s": s, "lv": lv, "xp": lv ** 3, "hp": 1})
+    return out
+
+
+def live_out(d: dict, uid: str) -> dict:
+    side = "host" if d["host_id"] == uid else "guest"
+    other = "guest" if side == "host" else "host"
+    return {
+        "code": d["code"], "side": side, "status": d["status"], "turn": d["turn"],
+        "host": {"name": d["host_name"], "party": d["host_party"]},
+        "guest": {"name": d.get("guest_name"), "party": d.get("guest_party")} if d.get("guest_id") else None,
+        "log": d["log"], "my_action": d["actions"].get(side) is not None, "their_action": d["actions"].get(other) is not None,
+        "winner": d.get("winner"),
+    }
+
+
+async def live_doc(code: str, uid: str) -> dict:
+    d = await db.live_duels.find_one({"code": code.upper().strip()}, {"_id": 0})
+    if not d or uid not in (d["host_id"], d.get("guest_id")):
+        raise HTTPException(status_code=404, detail="Sfida in diretta non trovata")
+    return d
+
+
+@api_router.post("/live")
+async def live_create(body: LiveIn, user: dict = Depends(current_user)):
+    import secrets
+    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    doc = {"host_id": str(user["_id"]), "host_name": body.name, "host_party": clean_party(body.party), "guest_id": None,
+           "status": "waiting", "turn": 0, "actions": {"host": None, "guest": None}, "log": [], "winner": None,
+           "created_at": datetime.now(timezone.utc).isoformat(), "expires_at": datetime.now(timezone.utc) + timedelta(days=2)}
+    for _ in range(10):
+        doc["code"] = "".join(secrets.choice(alphabet) for _ in range(6))
+        try:
+            await db.live_duels.insert_one(dict(doc))
+            break
+        except DuplicateKeyError:
+            continue
+    return live_out(doc, doc["host_id"])
+
+
+@api_router.post("/live/{code}/join")
+async def live_join(code: str, body: LiveIn, user: dict = Depends(current_user)):
+    uid = str(user["_id"])
+    c = code.upper().strip()
+    d = await db.live_duels.find_one({"code": c})
+    if not d:
+        raise HTTPException(status_code=404, detail="Codice sfida non trovato")
+    if d["host_id"] == uid:
+        if d["status"] == "waiting":
+            raise HTTPException(status_code=400, detail="Non puoi sfidare te stesso!")
+        return live_out(d, uid)  # host coming back to a running duel
+    if d.get("guest_id") and d["guest_id"] != uid:
+        raise HTTPException(status_code=409, detail="Questa sfida è già cominciata con un altro giocatore")
+    if not d.get("guest_id"):
+        res = await db.live_duels.update_one({"code": c, "guest_id": None},
+                                             {"$set": {"guest_id": uid, "guest_name": body.name, "guest_party": clean_party(body.party), "status": "active"}})
+        if res.modified_count == 0:
+            raise HTTPException(status_code=409, detail="Questa sfida è già cominciata con un altro giocatore")
+    return live_out(await live_doc(c, uid), uid)
+
+
+@api_router.get("/live/{code}")
+async def live_get(code: str, user: dict = Depends(current_user)):
+    uid = str(user["_id"])
+    return live_out(await live_doc(code, uid), uid)
+
+
+@api_router.post("/live/{code}/action")
+async def live_action(code: str, body: LiveAction, user: dict = Depends(current_user)):
+    import secrets
+    uid = str(user["_id"])
+    d = await live_doc(code, uid)
+    side = "host" if d["host_id"] == uid else "guest"
+    other = "guest" if side == "host" else "host"
+    if d["status"] != "active":
+        raise HTTPException(status_code=409, detail="La sfida non è in corso")
+    if body.kind == "forfeit":
+        await db.live_duels.update_one({"code": d["code"], "status": "active"}, {"$set": {"status": "done", "winner": other, "forfeit": side}})
+        return live_out(await live_doc(code, uid), uid)
+    if body.turn != d["turn"]:
+        raise HTTPException(status_code=409, detail="Turno non valido")
+    if body.kind == "move" and not body.move or body.kind == "switch" and body.idx is None or body.kind == "item" and (body.item is None or body.idx is None):
+        raise HTTPException(status_code=422, detail="Azione non valida")
+    if body.kind == "item":
+        sv = await db.saves.find_one({"user_id": uid}, {"state.items": 1})
+        if (((sv or {}).get("state") or {}).get("items") or {}).get(body.item, 0) <= 0:
+            raise HTTPException(status_code=422, detail="Non hai questo strumento nello zaino")
+    act = body.model_dump(exclude={"turn"})
+    await db.live_duels.update_one({"code": d["code"], "turn": body.turn, f"actions.{side}": None}, {"$set": {f"actions.{side}": act}})
+    cur = await db.live_duels.find_one({"code": d["code"]})
+    if cur["turn"] == body.turn and cur["actions"]["host"] and cur["actions"]["guest"]:
+        entry = {"turn": body.turn, "host": cur["actions"]["host"], "guest": cur["actions"]["guest"], "seed": secrets.randbelow(2**31)}
+        await db.live_duels.update_one(
+            {"code": d["code"], "turn": body.turn, "actions.host": {"$ne": None}, "actions.guest": {"$ne": None}},
+            {"$push": {"log": entry}, "$set": {"actions": {"host": None, "guest": None}}, "$inc": {"turn": 1}},
+        )
+    return live_out(await live_doc(code, uid), uid)
+
+
+class LiveEnd(BaseModel):
+    winner: str = Field(pattern="^(host|guest|draw)$")
+
+
+@api_router.post("/live/{code}/end")
+async def live_end(code: str, body: LiveEnd, user: dict = Depends(current_user)):
+    uid = str(user["_id"])
+    d = await live_doc(code, uid)
+    await db.live_duels.update_one({"code": d["code"], "status": "active"}, {"$set": {"status": "done", "winner": body.winner}})
+    return live_out(await live_doc(code, uid), uid)
 
 
 app.include_router(api_router)

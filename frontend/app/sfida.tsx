@@ -71,6 +71,11 @@ export default function Sfida() {
         <PixelText style={styles.meta}>Crea un codice con la tua squadra attuale e mandalo a un amico, oppure inserisci il suo codice per sfidare la sua squadra. Le sfide non danneggiano i tuoi mostrelli.</PixelText>
         {!!msg && <PixelText testID="duel-msg" style={styles.msg}>{msg}</PixelText>}
 
+        <Pressable testID="duel-live-btn" onPress={() => router.push("/diretta")} style={styles.live}>
+          <PixelText style={styles.liveTitle}>● SFIDA IN DIRETTA</PixelText>
+          <PixelText style={styles.meta}>Lotta in tempo reale contro un amico, turno per turno. Tocca qui ›</PixelText>
+        </Pressable>
+
         <View style={styles.card}>
           <PixelText style={styles.h}>Accetta una sfida</PixelText>
           <TextInput testID="duel-code-input" value={code} onChangeText={(t) => setCode(t.toUpperCase())} maxLength={6} autoCapitalize="characters" placeholder="ES. AB12CD" placeholderTextColor={colors.muted} style={styles.input} />
@@ -112,4 +117,6 @@ const styles = StyleSheet.create({
   team: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   row: { borderWidth: 1, borderColor: colors.border, padding: 10, gap: 4, backgroundColor: colors.surfaceSecondary },
   code: { fontSize: 18, letterSpacing: 3, color: colors.brandSecondary },
+  live: { borderWidth: 3, borderColor: colors.brandPrimary, backgroundColor: colors.surfaceSecondary, padding: 12, gap: 4, minHeight: 64 },
+  liveTitle: { fontSize: 16, color: colors.brandPrimary },
 });

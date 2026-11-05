@@ -58,3 +58,7 @@ Map adventure with turn-based battles · modern colourful pixel art · strong sa
 
 - P1: use items during battle, monster evolutions, sound and music
 - P2: trade or battle with friends, more areas (the Romagna coast, the Apennines), daily events
+
+## Iteration 7 (2026-06)
+- Sfida in Diretta (/diretta, reached from Sfida tra Amici): two friends battle live turn by turn with no time limit. Backend `live_duels` stores both picks; once both are in, the turn gets a random seed and both phones work out the same result (duelEngine.ts). Moves, switching and bag items (they are used up) are allowed; fainted monsters are swapped automatically; there is a Surrender button. Endpoints: POST /api/live, POST /api/live/{code}/join, GET /api/live/{code}, POST /api/live/{code}/action, POST /api/live/{code}/end.
+- The 12 evolved forms that used to be recolours now have their own 16x16 drawings (SKINS removed), and evolved forms are drawn 20% bigger in battle.

@@ -1,0 +1,27 @@
+{
+  "summary": "Retested only the 5 live-duel fixes from iteration 7, plus a quick regression. All 5 fixes work. Backend: 25 of 25 pytest pass (the iter7 suite was updated and a new iter8 suite added). Frontend: 3 two-client Playwright runs at 375x667. FIX1: a Brodino on a full-HP Mortadellone shows 'è già sazio' and the count stays x3. A Brodino on the damaged monster (63/73) heals 10 PV and the count goes to x2. /api/save then has brodino=2, and resuming the duel does not lower it again. FIX2: tapping live-cmd-forfeit once changes the label to 'SICURO?' and keeps the menu open. The second tap shows 'Ti sei arreso', and the guest sees 'TEST_Ana si è arreso. Hai vinto!'. FIX3: live-wait-forfeit (315x44) changes to 'SICURO? TOCCA PER ARRENDERTI' on the first tap and surrenders on the second. FIX4: in the UI the host typed their own active code and got back into live-battle ('Bentornato'). The API returns 400 on a waiting duel and 200 with side=host on active or done duels. FIX5: an item action returns 422 when there is no save, when the count is 0, or when the item key is missing, and 200 when the item is owned. The TTL index on expires_at exists (expireAfterSeconds=0) and expires_at is set to +2 days. Regression: turn 3 with moves on both sides gave the same messages on both clients. HP is the same on both: 53/73 and 55/67, and the HP bar widths match across clients. One minor UX issue found.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "LiveBattle forfeit confirmation", "issue": "The 'Sicuro?' state stays on after leaving the menu and coming back (menu -> Lotta -> Indietro). quitAt is tied to the phase name 'menu', so a later single tap surrenders. Reset quitAt whenever the phase changes. Reference: /app/frontend/src/game/LiveBattle.tsx:114-119", "testID": "live-cmd-forfeit", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_iter8_live_fixes.py", "/app/backend/tests/test_iter7_live_duel.py", "/app/test_reports/pytest/pytest_iter8.xml"],
+  "action_items": [
+    "LOW: Clear quitAt when the phase changes (e.g. useEffect(() => setQuitAt(null), [phase])) so the 'Sicuro?' state does not carry over after going to another screen and back.",
+    "LOW (optional): The server item check in /live/{code}/action reads the save, which the client writes after a 2.5s debounce. Items bought just before a live duel could be rejected with 422 until the save is flushed. Consider flushing the save when entering /diretta."
+  ],
+  "critical_code_review_comments": [
+    "FIX1 is correct. Item use is counted from DLine.used for my side only, inside the new-sealed-turns effect. shown.current starts at log.length, so resuming does not count items twice (verified: brodino stayed at 2).",
+    "FIX4: host /join on an active or done duel returns live_out without changing host_name or host_party (verified)."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter7_live_duel.py (host self-join on an active duel now expects 200; item test now seeds items in the save first)", "/app/backend/tests/test_iter8_live_fixes.py (new)"],
+  "success_rate": {"backend": "100%", "frontend": "100% (all 5 fixes and the regression pass; 1 LOW UX issue)"},
+  "seed_data_creation": "Tests used existing TEST_ users test_it7_host_2c6b1 and test_it7_guest_22780 (password secret123). The guest party was set to vaporiera Lv24 + tortellotto Lv12. The host's brodino count was set back to 3 after the test. The pytest runs register new test_it8_* users.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Same login and navigation flow as iteration 7. Wait for the SlideInDown animation (about 400ms) before reading the live-item-* text or clicking live-move-*. Use save_tool.py with EXPO_PUBLIC_BACKEND_URL exported. The iter8 TTL test reads Mongo directly using /app/backend/.env."
+}

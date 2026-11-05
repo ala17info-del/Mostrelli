@@ -1,0 +1,40 @@
+{
+  "summary": "Iteration 7 (MOSTRELLI): Live PvP 'Sfida in Diretta' + 'Disegni Evoluti'. Backend: 39/39 pytest pass (new test_iter7_live_duel.py with 26 tests + the iter6 regression). Checked: create gives status waiting with a 6-char code and a cleaned-up party; join works (code is case-insensitive) and sets status active; host joining their own code gets 400; a 3rd user gets 409; a non-participant GET gets 404; an unknown code gets 404; an action while still waiting gets 409; a turn is sealed only after both actions are in (log entry {turn, host, guest, seed}, turn+1, actions reset, my_action/their_action correct); a wrong turn gets 409; a missing move/idx/item, vasetto, an unknown kind or idx 9 get 422; a double submit keeps the first action; forfeit sets done and winner = other side, and a later /end cannot overwrite the winner; /end validates the winner and checks the user is a participant. Frontend (375x667, 2 browser contexts): Menu > Sfida tra Amici > duel-live-btn > live-screen works. Create code shows the code in the waiting room. A short code and an invalid code show their messages. The guest joins and both clients go to live-battle. Played 5 turns with fight, switch (live-switch-1), bag (brodino x3 -> x2, saved to the server) and a KO auto-replace (Mortadellone fainted -> Crescentino sent out). live-waiting is shown while the opponent decides. HP matched exactly on both clients every turn (bars agree once the animation finishes). Forfeit by the guest: guest sees 'Ti sei arreso', host sees 'TEST_Bep si è arreso. Hai vinto!', and live-exit-btn goes back to the duel screen. A KO win (lv50 vs lv2) shows the win/lose result on both clients, and the server stores status done, winner host. Vasetto is not shown in the live bag. Party HP in the save is unchanged after the duel. Evolved sprites: all 12 evolved species have their own 16x16 grids, none identical to the pre-evolution, all palette keys valid. Mostrario renders them. battleSize works (Mortadellone 134px vs base 112 in the live duel, 144px vs 120 in a wild battle). Regression: a wild battle in Altedo grass works. No page errors. No deprecated Expo packages.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/live/{code}/action (kind=item)", "issue": "The server does not check that the player owns the item. Consumption is client-side only, so a modified client could use unlimited items."},
+      {"endpoint": "POST /api/live", "issue": "Live duels never expire or get cleaned up. Abandoned 'waiting'/'active' docs stay forever (no TTL index)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "LiveBattle item use", "issue": "An item is consumed even when it has no effect. Brodino on a full-HP Mortadellone showed 'Mortadellone è già sazio.' but the count still went x3 -> x2 (and was saved). In normal battles an item with no effect is not consumed. RCA: LiveBattle.tsx:100 decrements save.items as soon as the action POST succeeds, before the turn is resolved and r.ok is known. The item is also lost if the opponent forfeits before the turn is sealed.", "testID": "live-item-target-0", "priority": "MEDIUM"},
+      {"component": "LiveBattle forfeit", "issue": "Arrenditi forfeits on a single tap with no confirmation, so one mis-tap ends the match.", "testID": "live-cmd-forfeit", "priority": "LOW"},
+      {"component": "LiveBattle wait phase", "issue": "While waiting for the opponent (no time limit), there is no forfeit/exit button. If the friend goes AFK, the player's only way out is the hardware/browser back button.", "testID": "live-waiting", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Resume live duel", "issue": "The live state only lives in the diretta.tsx component. After an app reload or leaving the screen, the host cannot get back in: there is no 'my active duel' lookup, and join returns 400 for the host. The guest can rejoin because join is idempotent for the guest.", "affected_testIDs": ["live-join-btn", "live-create-btn"]}
+    ],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_iter7_live_duel.py", "/app/backend/tests/setup_iter7_users.py", "/app/test_reports/pytest/pytest_iter7.xml"],
+  "action_items": [
+    "MEDIUM: In LiveBattle, consume an item only when the sealed turn resolves it with r.ok (e.g. decrement inside the resolved-turn effect for my side), or block targets where it has no effect (full HP for brodino/tortellini).",
+    "LOW: Add a confirmation before live-cmd-forfeit, and add a forfeit/exit option in the live-waiting phase.",
+    "LOW: Let the host resume an active live duel (e.g. GET /api/live/mine, or allow the host to POST /join on their own active code and get the doc back instead of a 400).",
+    "LOW: Add a TTL / created_at cleanup for live_duels. Optionally track item counts server-side."
+  ],
+  "critical_code_review_comments": [
+    "LiveBattle sim useMemo re-runs the full deterministic simulation on every 1.5s poll (new live.log/guest refs). Cheap for now, but memoising on log.length would avoid the extra work.",
+    "Deterministic resolution overrides Math.random globally during resolveTurn. It works because the code is synchronous, but it is fragile if anything async is added in that path.",
+    "Base species sprites are 12x12 and evolved/final ones are 16x16. They render fine (PixelSprite scales to size)."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter7_live_duel.py", "/app/backend/tests/setup_iter7_users.py"],
+  "success_rate": {"backend": "100%", "frontend": "95% (all flows work; one item-consumption logic bug)"},
+  "seed_data_creation": "TEST users test_it7_host_2c6b1@example.com and test_it7_guest_22780@example.com (password secret123) with saves, plus several test_it7_* users from pytest. Live duel docs were created by the tests. The host save was patched (party, seen, map=altedo) for regression checks.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Live duel UI test: 2 browser contexts (page.context.browser.new_context()). Login: title-login-btn -> auth-email-input/auth-password-input -> auth-submit-btn -> title-continue-btn -> btn-menu-center -> menu-duel -> duel-live-btn. Drain messages by clicking live-message-box until it is gone. Then live-cmd-fight -> live-move-*. Read HP from live-me-info text 'x/y PV'. Bars animate, so wait before comparing widths. Use python save_tool.py <email> '<json>' (export EXPO_PUBLIC_BACKEND_URL) to set the party, e.g. lv50 vs lv2 for a quick KO-win test. Screenshots must use a .jpeg path when quality is set."
+}
