@@ -7,6 +7,13 @@ const BGM = {
   town: require("../../assets/audio/town.wav"),
   battle: require("../../assets/audio/battle.wav"),
   beach: require("../../assets/audio/beach.wav"),
+  bologna: require("../../assets/audio/bologna.wav"),
+  osteria: require("../../assets/audio/osteria.wav"),
+  terme: require("../../assets/audio/terme.wav"),
+  imola: require("../../assets/audio/imola.wav"),
+  ferrara: require("../../assets/audio/ferrara.wav"),
+  maggiore: require("../../assets/audio/maggiore.wav"),
+  altedo: require("../../assets/audio/altedo.wav"),
 };
 const SFX = {
   step: require("../../assets/audio/step.wav"),

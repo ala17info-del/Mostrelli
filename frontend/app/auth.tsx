@@ -1,6 +1,7 @@
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
-import { Pressable, StyleSheet, TextInput, View } from "react-native";
+import * as AppleAuthentication from "expo-apple-authentication";
+import React, { useEffect, useState } from "react";
+import { Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -11,7 +12,29 @@ import { colors, FONT } from "@/src/theme";
 export default function AuthScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { login, register } = useAuth();
+  const { login, register, loginApple } = useAuth();
+  const [appleOk, setAppleOk] = useState(false);
+  useEffect(() => {
+    if (Platform.OS === "ios") AppleAuthentication.isAvailableAsync().then(setAppleOk).catch(() => setAppleOk(false));
+  }, []);
+  const apple = async () => {
+    setError("");
+    try {
+      const c = await AppleAuthentication.signInAsync({
+        requestedScopes: [AppleAuthentication.AppleAuthenticationScope.FULL_NAME, AppleAuthentication.AppleAuthenticationScope.EMAIL],
+      });
+      if (!c.identityToken) throw new Error("Apple non ha restituito il token");
+      const name = [c.fullName?.givenName, c.fullName?.familyName].filter(Boolean).join(" ") || null;
+      setBusy(true);
+      await loginApple(c.identityToken, c.email ?? null, name);
+      if (router.canGoBack()) router.back();
+      else router.replace("/");
+    } catch (e: any) {
+      if (e?.code !== "ERR_REQUEST_CANCELED") setError(e?.message ?? "Accesso con Apple non riuscito");
+    } finally {
+      setBusy(false);
+    }
+  };
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -43,7 +66,7 @@ export default function AuthScreen() {
           <PixelText style={{ color: colors.brandSecondary }}>‹ Indietro</PixelText>
         </Pressable>
         <PixelText style={styles.title}>{mode === "login" ? "ACCEDI" : "NUOVO ALLENATORE"}</PixelText>
-        <PixelText style={styles.sub}>I tuoi mostri restano al sicuro nel cloud, anche se cambi telefono.</PixelText>
+        <PixelText style={styles.sub}>I tuoi mostrelli restano al sicuro nel cloud, anche se cambi telefono.</PixelText>
         <View style={styles.tabs}>
           {(["login", "register"] as const).map((m) => (
             <Pressable key={m} testID={`auth-tab-${m}`} onPress={() => setMode(m)} style={[styles.tab, mode === m && styles.tabOn]}>
@@ -56,6 +79,19 @@ export default function AuthScreen() {
         <PixelText style={styles.label}>Password</PixelText>
         <TextInput testID="auth-password-input" style={styles.input} value={password} onChangeText={setPassword} secureTextEntry placeholder="almeno 6 caratteri" placeholderTextColor={colors.muted} onSubmitEditing={submit} returnKeyType="go" />
         {!!error && <PixelText testID="auth-error" style={styles.error}>{error}</PixelText>}
+        {appleOk && (
+          <View style={{ marginTop: 20 }}>
+            <AppleAuthentication.AppleAuthenticationButton
+              testID="auth-apple-btn"
+              buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
+              cornerRadius={2}
+              style={{ height: 52, width: "100%" }}
+              onPress={apple}
+            />
+            <PixelText style={styles.or}>oppure con email</PixelText>
+          </View>
+        )}
         <RetroButton testID="auth-submit-btn" label={busy ? "Attendi..." : mode === "login" ? "Entra" : "Crea account"} disabled={busy} onPress={submit} style={{ marginTop: 24 }} />
       </KeyboardAwareScrollView>
     </View>
@@ -74,4 +110,5 @@ const styles = StyleSheet.create({
   label: { marginTop: 16, marginBottom: 6, color: colors.onSurfaceSecondary, fontSize: 12 },
   input: { height: 52, borderWidth: 2, borderColor: colors.borderStrong, backgroundColor: colors.surfaceSecondary, color: colors.onSurface, paddingHorizontal: 12, fontFamily: FONT, fontSize: 15, borderRadius: 2 },
   error: { color: colors.error, marginTop: 12, fontSize: 13 },
+  or: { color: colors.muted, fontSize: 12, textAlign: "center", marginTop: 12 },
 });

@@ -5,12 +5,14 @@ import { LayoutChangeEvent, Modal, Pressable, StyleSheet, View } from "react-nat
 import Animated, { FadeIn, FadeInDown, FadeOut } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { api } from "@/src/api";
 import { useAuth } from "@/src/auth";
 import { Battle, BattleResult, BattleSetup } from "@/src/game/Battle";
-import { initAudio, isMuted, playBgm, setMuted, sfx } from "@/src/game/audio";
+import { BgmName, initAudio, isMuted, playBgm, setMuted, sfx } from "@/src/game/audio";
 import { ALL_BADGES, BLOCKING, ENCOUNTER_TILES, ITEMS, ItemId, MAPS, Npc } from "@/src/game/data";
 import { healAll, makeMon, monName, rollWild, stats } from "@/src/game/engine";
 import { Save, useGame } from "@/src/game/GameContext";
+import { HealFx } from "@/src/game/BattleFx";
 import { TileMap } from "@/src/game/TileMap";
 import { hap, HpBar, PixelText, RetroButton } from "@/src/game/ui";
 import { colors } from "@/src/theme";
@@ -25,7 +27,18 @@ export default function GameScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user } = useAuth();
-  const { save, setSave, flush, sync } = useGame();
+  const { save, setSave, flush, sync, duel, setDuel } = useGame();
+  const [run, setRun] = useState(false);
+  const runRef = useRef(false);
+  runRef.current = run;
+  const [healK, setHealK] = useState(0);
+  const [duelCode, setDuelCode] = useState<string | null>(null);
+  useEffect(() => {
+    if (!duel) return;
+    setDuel(null);
+    setDuelCode(duel.code);
+    setBattle({ kind: "trainer", trainerName: `${duel.name} (sfida)`, field: "grass", duel: true, enemies: duel.party.map((m) => ({ ...m, uid: Math.random().toString(36).slice(2, 10), hp: stats(m).hp })) });
+  }, [duel, setDuel]);
   const [area, setArea] = useState({ w: 0, h: 0 });
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const [battle, setBattle] = useState<(BattleSetup & { npc?: Npc }) | null>(null);
@@ -45,7 +58,7 @@ export default function GameScreen() {
     initAudio().then(() => {
       setMutedState(isMuted());
       if (!mapId) return;
-      playBgm(inBattle ? "battle" : mapId === "riviera" ? "beach" : "town");
+      playBgm(inBattle ? "battle" : ((MAPS[mapId].music ?? "town") as BgmName));
     });
   }, [mapId, inBattle]);
 
@@ -102,7 +115,7 @@ export default function GameScreen() {
   const startHold = (dir: Dir) => {
     step(dir);
     if (holdTimer.current) clearInterval(holdTimer.current);
-    holdTimer.current = setInterval(() => step(dir), 170);
+    holdTimer.current = setInterval(() => step(dir), runRef.current ? 110 : 170);
   };
   const stopHold = () => {
     if (holdTimer.current) clearInterval(holdTimer.current);
@@ -124,6 +137,7 @@ export default function GameScreen() {
         setSave((p) => ({ ...p, party: healAll(p.party), lastHeal: { map: p.map, ...MAPS[p.map].heal } }));
         hap("success");
         sfx("heal");
+        setHealK(Date.now());
         setToast("Squadra curata!");
       });
     }
@@ -140,6 +154,14 @@ export default function GameScreen() {
   };
 
   const onBattleEnd = (r: BattleResult) => {
+    if (duelCode) {
+      const won = r.outcome === "win";
+      api(`/duel/${duelCode}/result`, { method: "POST", body: JSON.stringify({ won }) }).catch(() => {});
+      setDuelCode(null);
+      setBattle(null);
+      say("Sfida tra Amici", [won ? "Hai vinto la sfida! Il tuo amico lo scoprirà presto... e non sarà contento." : "Hai perso la sfida. Nessun problema: la tua squadra non ha subito danni. Rivincita?"]);
+      return;
+    }
     const npc = battle?.npc;
     const wildPay = 10 + (battle?.enemies[0]?.lv ?? 1) * 8;
     let after: { speaker: string; lines: string[] } | null = null;
@@ -234,7 +256,12 @@ export default function GameScreen() {
       <View style={styles.mapArea} onLayout={onLayout}>
         {size > 0 && (
           <View style={{ alignItems: "center", justifyContent: "center", flex: 1 }}>
-            <TileMap map={map} px={save.x} py={save.y} dir={save.dir} cols={COLS} rows={rows} size={size} defeated={save.defeated} />
+            <TileMap map={map} px={save.x} py={save.y} dir={save.dir} cols={COLS} rows={rows} size={size} defeated={save.defeated} stepMs={run ? 110 : 170} />
+          </View>
+        )}
+        {!!healK && (
+          <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+            <HealFx key={healK} label="Squadra in forma!" />
           </View>
         )}
         {!!toast && (
@@ -265,16 +292,20 @@ export default function GameScreen() {
           </View>
           <View style={styles.dRow}><DBtn dir="down" onIn={startHold} onOut={stopHold} /></View>
         </View>
+        <Pressable testID="btn-menu-center" onPress={() => { hap("selection"); if (!busyRef.current) setMenu(true); }} style={({ pressed }) => [styles.menuPill, pressed && styles.pressed]}>
+          <MaterialDesignIcons name="menu" size={18} color={colors.onSurface} />
+          <PixelText style={styles.menuPillTxt}>MENU</PixelText>
+        </Pressable>
         <View style={styles.right}>
           <View style={styles.ab}>
-            <Pressable testID="btn-b-menu" onPress={() => { hap("selection"); if (!busyRef.current) setMenu(true); }} style={({ pressed }) => [styles.round, styles.bBtn, pressed && styles.pressed]}>
+            <Pressable testID="btn-b-run" onPress={() => { hap("selection"); if (dialog) advanceDialog(); else { setRun(!run); setToast(run ? "Cammini" : "Corri!"); } }} style={({ pressed }) => [styles.round, styles.bBtn, run && styles.bOn, pressed && styles.pressed]}>
               <PixelText style={styles.abTxt}>B</PixelText>
             </Pressable>
             <Pressable testID="btn-a-interact" onPress={dialog ? advanceDialog : interact} style={({ pressed }) => [styles.round, styles.aBtn, pressed && styles.pressed]}>
               <PixelText style={styles.abTxt}>A</PixelText>
             </Pressable>
           </View>
-          <PixelText style={styles.hint}>A parla · B menu</PixelText>
+          <PixelText style={styles.hint}>A parla · B {run ? "cammina" : "corri"}</PixelText>
         </View>
       </View>
 
@@ -285,9 +316,11 @@ export default function GameScreen() {
         <Pressable style={styles.scrim} onPress={() => setMenu(false)} testID="menu-scrim">
           <Animated.View entering={FadeInDown.duration(200)} style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
             <PixelText style={styles.sheetTitle}>MENU · {save.name}</PixelText>
+            <MenuItem icon="map" label="Mappa del Mondo" testID="menu-worldmap" onPress={() => { setMenu(false); router.push("/mappa"); }} />
+            <MenuItem icon="sword-cross" label="Sfida tra Amici" testID="menu-duel" onPress={() => { setMenu(false); router.push("/sfida"); }} />
             <MenuItem icon="account-group" label="Squadra" testID="menu-team" onPress={() => { setMenu(false); router.push("/team"); }} />
             <MenuItem icon="book-open-variant" label="Mostrario" testID="menu-mostrario" onPress={() => { setMenu(false); router.push("/mostrario"); }} />
-            <MenuItem icon="bag-personal" label={`Zaino: ${save.items.vasetto ?? 0} vasetti · ${save.items.brodino ?? 0} brodini · ${save.items.tortellini ?? 0} tortellini · ${save.items.caffe ?? 0} caffè`} testID="menu-bag" onPress={() => { setMenu(false); router.push("/team"); }} />
+            <MenuItem icon="bag-personal" label={`Zaino: ${save.items.vasetto ?? 0} vasetti · ${save.items.brodino ?? 0} brodini · ${save.items.tortellini ?? 0} tortellini · ${save.items.caffe ?? 0} caffè · ${save.items.digestivo ?? 0} digestivi · ${save.items.gelato ?? 0} gelati`} testID="menu-bag" onPress={() => { setMenu(false); router.push("/team"); }} />
             <MenuItem icon="medal" label={`Sigilli: ${save.badges.length ? save.badges.join(", ") : "nessuno"}`} testID="menu-badges" onPress={() => {}} />
             <MenuItem icon="content-save" label={sync === "saving" ? "Salvataggio..." : sync === "error" ? "Salva (errore, riprova)" : "Salva ora"} testID="menu-save" onPress={async () => { await flush(); setToast("Partita salvata!"); setMenu(false); }} />
             <MenuItem icon={muted ? "volume-off" : "volume-high"} label={muted ? "Audio: spento" : "Audio: acceso"} testID="menu-audio" onPress={() => { setMuted(!muted); setMutedState(!muted); }} />
@@ -350,17 +383,20 @@ const styles = StyleSheet.create({
   speaker: { color: colors.brandSecondary, fontSize: 12, marginBottom: 6 },
   dialogTxt: { fontSize: 15, lineHeight: 22 },
   next: { alignSelf: "flex-end", color: colors.brandSecondary, marginTop: 4 },
-  controls: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingTop: 16, borderTopWidth: 2, borderTopColor: colors.border, backgroundColor: colors.surfaceSecondary },
+  controls: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 10, paddingTop: 16, borderTopWidth: 2, borderTopColor: colors.border, backgroundColor: colors.surfaceSecondary },
   dpad: { gap: 0 },
   dRow: { flexDirection: "row", justifyContent: "center" },
-  dBtn: { width: 58, height: 58, backgroundColor: colors.surfaceTertiary, borderWidth: 2, borderColor: colors.borderStrong, alignItems: "center", justifyContent: "center" },
-  dCenter: { width: 58, height: 58, backgroundColor: colors.surfaceTertiary },
+  dBtn: { width: 50, height: 50, backgroundColor: colors.surfaceTertiary, borderWidth: 2, borderColor: colors.borderStrong, alignItems: "center", justifyContent: "center" },
+  dCenter: { width: 50, height: 50, backgroundColor: colors.surfaceTertiary },
   pressed: { backgroundColor: colors.borderStrong, transform: [{ scale: 0.95 }] },
   right: { alignItems: "center", gap: 12 },
-  ab: { flexDirection: "row", gap: 16, alignItems: "flex-end" },
-  round: { width: 68, height: 68, borderRadius: 999, alignItems: "center", justifyContent: "center", borderWidth: 3, borderColor: colors.onSurface },
-  aBtn: { backgroundColor: colors.brandPrimary, marginBottom: 24 },
-  bBtn: { backgroundColor: colors.brandTertiary },
+  ab: { flexDirection: "row", gap: 10, alignItems: "flex-end" },
+  round: { width: 58, height: 58, borderRadius: 999, alignItems: "center", justifyContent: "center", borderWidth: 3, borderColor: colors.onSurface },
+  aBtn: { backgroundColor: colors.brandTertiary, marginBottom: 24 },
+  bBtn: { backgroundColor: colors.brandPrimary },
+  bOn: { borderColor: colors.brandSecondary, borderWidth: 4 },
+  menuPill: { alignItems: "center", justifyContent: "center", gap: 2, width: 54, height: 48, borderWidth: 2, borderColor: colors.borderStrong, backgroundColor: colors.surfaceTertiary, borderRadius: 999, marginTop: 64 },
+  menuPillTxt: { fontSize: 10, color: colors.onSurface },
   abTxt: { fontSize: 22, color: colors.onBrandPrimary },
   hint: { fontSize: 11, color: colors.muted },
   scrim: { flex: 1, backgroundColor: colors.scrim, justifyContent: "flex-end" },

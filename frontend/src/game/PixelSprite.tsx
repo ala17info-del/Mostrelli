@@ -1,7 +1,7 @@
 import React, { memo } from "react";
 import { View } from "react-native";
 
-import { PAL, SPRITES } from "./sprites";
+import { PAL, SKINS, SPRITES } from "./sprites";
 
 type Props = {
   name: string;
@@ -70,7 +70,10 @@ function gridFor(name: string, hi: boolean) {
 }
 
 // Renders a pixel grid (12x12 or 16x16), merging horizontal runs of equal color into one View.
-function PixelSpriteBase({ name, size, look, silhouette, flip, testID }: Props) {
+function PixelSpriteBase({ name: rawName, size, look: rawLook, silhouette, flip, testID }: Props) {
+  const skin = SKINS[rawName];
+  const name = skin?.base ?? rawName;
+  const look = skin ? { ...skin.look, ...rawLook } : rawLook;
   const grid = gridFor(name, size >= 40);
   const px = size / grid.length;
   return (

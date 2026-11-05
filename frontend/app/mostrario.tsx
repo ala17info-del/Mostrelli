@@ -55,7 +55,7 @@ export default function Mostrario() {
         numColumns={2}
         columnWrapperStyle={{ gap: 12 }}
         contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: insets.bottom + 24 }}
-        ListEmptyComponent={<PixelText style={[styles.meta, { textAlign: "center", marginTop: 32 }]} testID="mostrario-empty">Nessun mostro qui. Esplora l'Emilia-Romagna!</PixelText>}
+        ListEmptyComponent={<PixelText style={[styles.meta, { textAlign: "center", marginTop: 32 }]} testID="mostrario-empty">{"Nessun mostrello qui. Esplora l'Emilia-Romagna!"}</PixelText>}
         renderItem={({ item: s }) => {
           const caught = save.caught.includes(s.id);
           const seen = save.seen.includes(s.id);

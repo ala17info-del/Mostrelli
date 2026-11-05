@@ -9,6 +9,7 @@ type AuthCtx = {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
+  loginApple: (identityToken: string, email: string | null, fullName: string | null) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -42,6 +43,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading,
     login: (e, p) => handle("/auth/login", e, p),
     register: (e, p) => handle("/auth/register", e, p),
+    loginApple: async (identityToken, email, fullName) => {
+      const r = await api<{ token: string; user: User }>("/auth/apple", {
+        method: "POST",
+        body: JSON.stringify({ identity_token: identityToken, email, full_name: fullName }),
+      });
+      await storage.secureSet(TOKEN_KEY, r.token);
+      setUser(r.user);
+    },
     logout: async () => {
       await storage.secureRemove(TOKEN_KEY);
       setUser(null);

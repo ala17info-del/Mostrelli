@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { StyleSheet, View } from "react-native";
 
 import { GameMap } from "./data";
@@ -17,9 +18,10 @@ type Props = {
   rows: number;
   size: number;
   defeated: string[];
+  stepMs?: number;
 };
 
-export function TileMap({ map, px, py, dir, cols, rows, size, defeated }: Props) {
+export function TileMap({ map, px, py, dir, cols, rows, size, defeated, stepMs = 170 }: Props) {
   const [phase, setPhase] = useState(0);
   useEffect(() => {
     const t = setInterval(() => setPhase((p) => 1 - p), 650);
@@ -32,21 +34,50 @@ export function TileMap({ map, px, py, dir, cols, rows, size, defeated }: Props)
   const clamp = (v: number, h: number, n: number, len: number) => (len >= n ? Math.max(h, Math.min(len - 1 - (n - 1 - h), v)) : Math.floor(len / 2));
   const cx = clamp(px, hx, cols, W);
   const cy = clamp(py, hy, rows, Hh);
+  const camX = useSharedValue(0);
+  const camY = useSharedValue(0);
+  const plX = useSharedValue((px - cx + hx) * size);
+  const plY = useSharedValue((py - cy + hy) * size);
+  const prev = useRef({ cx, cy, px, py, id: map.id });
+  useEffect(() => {
+    const p = prev.current;
+    const jump = p.id !== map.id || Math.abs(px - p.px) + Math.abs(py - p.py) > 1;
+    const dx = cx - p.cx, dy = cy - p.cy;
+    prev.current = { cx, cy, px, py, id: map.id };
+    const ease = { duration: stepMs, easing: Easing.linear };
+    const tx = (px - cx + hx) * size, ty = (py - cy + hy) * size;
+    if (jump) {
+      camX.value = 0;
+      camY.value = 0;
+      plX.value = tx;
+      plY.value = ty;
+      return;
+    }
+    if (dx || dy) {
+      camX.value = dx * size;
+      camY.value = dy * size;
+      camX.value = withTiming(0, ease);
+      camY.value = withTiming(0, ease);
+    }
+    plX.value = withTiming(tx, ease);
+    plY.value = withTiming(ty, ease);
+  }, [cx, cy, px, py, map.id, size, hx, hy, stepMs, camX, camY, plX, plY]);
+  const camStyle = useAnimatedStyle(() => ({ transform: [{ translateX: camX.value }, { translateY: camY.value }] }));
+  const plStyle = useAnimatedStyle(() => ({ transform: [{ translateX: plX.value }, { translateY: plY.value }] }));
   const npcAt: Record<string, (typeof map.npcs)[number]> = {};
   for (const n of map.npcs) npcAt[`${n.x},${n.y}`] = n;
   const out = [];
-  for (let r = 0; r < rows; r++) {
+  for (let r = -1; r <= rows; r++) {
     const cells = [];
-    for (let c = 0; c < cols; c++) {
+    for (let c = -1; c <= cols; c++) {
       const x = cx - hx + c;
       const y = cy - hy + r;
       const ch = map.tiles[y]?.[x] ?? "X";
       const npc = npcAt[`${x},${y}`];
-      const isMe = x === px && y === py;
       cells.push(
         <View key={c} style={{ width: size, height: size }}>
           <TileArt ch={ch} size={size} x={x} y={y} phase={ANIMATED_TILES.has(ch) ? phase : 0} />
-          {(npc || isMe) && <View style={[st.shadow, { width: size * 0.7, height: size * 0.18, left: size * 0.15, top: size * 0.82 }]} />}
+          {npc && <View style={[st.shadow, { width: size * 0.7, height: size * 0.18, left: size * 0.15, top: size * 0.82 }]} />}
           {npc && (
             <View style={st.actor} testID={`npc-${npc.id}`}>
               <PixelSprite name="person" size={size} look={npc.look} />
@@ -63,11 +94,7 @@ export function TileMap({ map, px, py, dir, cols, rows, size, defeated }: Props)
               <MaterialDesignIcons name={defeated.includes(npc.id) ? "check-bold" : npc.kind === "boss" ? "crown" : "sword-cross"} size={11} color="#ffffff" />
             </View>
           )}
-          {isMe && (
-            <View style={st.actor} testID="player-sprite">
-              <PixelSprite name={playerSprite} size={size} flip={dir === "left"} />
-            </View>
-          )}
+
         </View>,
       );
     }
@@ -77,7 +104,15 @@ export function TileMap({ map, px, py, dir, cols, rows, size, defeated }: Props)
       </View>,
     );
   }
-  return <View testID="tile-map">{out}</View>;
+  return (
+    <View testID="tile-map" style={{ width: cols * size, height: rows * size, overflow: "hidden" }}>
+      <Animated.View style={[{ position: "absolute", left: -size, top: -size }, camStyle]}>{out}</Animated.View>
+      <Animated.View style={[st.actor, plStyle]} testID="player-sprite">
+        <View style={[st.shadow, { width: size * 0.7, height: size * 0.18, left: size * 0.15, top: size * 0.82 }]} />
+        <PixelSprite name={playerSprite} size={size} flip={dir === "left"} />
+      </Animated.View>
+    </View>
+  );
 }
 
 const st = StyleSheet.create({

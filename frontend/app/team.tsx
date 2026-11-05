@@ -45,7 +45,7 @@ export default function Team() {
   };
   const toBox = (i: number) => {
     if (save.party.length <= 1) return;
-    if (save.party[i].hp > 0 && save.party.filter((p) => p.hp > 0).length <= 1) return setMsg("Non puoi lasciare la squadra senza mostri in forze!");
+    if (save.party[i].hp > 0 && save.party.filter((p) => p.hp > 0).length <= 1) return setMsg("Non puoi lasciare la squadra senza mostrelli in forze!");
     setMsg(`${monName(save.party[i])} scende in Cantina.`);
     setSave((s) => ({ ...s, box: [...s.box, s.party[i]], party: s.party.filter((_, j) => j !== i) }));
   };
@@ -62,7 +62,8 @@ export default function Team() {
           <PixelText style={{ color: colors.brandSecondary }}>‹ Torna</PixelText>
         </Pressable>
         <PixelText style={styles.title}>SQUADRA</PixelText>
-        <PixelText style={styles.meta} testID="team-items">{save.items.vasetto ?? 0} vasetti · {save.items.brodino ?? 0} brodini · {save.items.tortellini ?? 0} tortellini · {save.items.caffe ?? 0} caffè · {save.money} €</PixelText>
+        <PixelText style={styles.meta} testID="team-items">{save.items.vasetto ?? 0} vasetti · {save.items.brodino ?? 0} brodini · {save.items.tortellini ?? 0} tortellini · {save.items.caffe ?? 0} caffè · {save.items.digestivo ?? 0} digestivi · {save.items.gelato ?? 0} gelati · {save.money} €</PixelText>
+        <PixelText style={styles.meta}>Digestivo e Gelato: usabili solo in lotta.</PixelText>
       </View>
       {!!msg && <PixelText testID="team-msg" style={styles.msg}>{msg}</PixelText>}
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 24, gap: 12 }}>
@@ -87,7 +88,7 @@ export default function Team() {
           </Animated.View>
         ))}
         <PixelText style={styles.section}>CANTINA ({save.box.length})</PixelText>
-        {save.box.length === 0 && <PixelText style={styles.meta}>Vuota. Qui finiscono i mostri quando la squadra è piena.</PixelText>}
+        {save.box.length === 0 && <PixelText style={styles.meta}>Vuota. Qui finiscono i mostrelli quando la squadra è piena.</PixelText>}
         {save.box.map((m, i) => (
           <MonCard key={m.uid} m={m} i={100 + i}>
             <RetroButton small variant="secondary" testID={`box-take-${i}`} label="Porta in squadra" onPress={() => fromBox(i)} />

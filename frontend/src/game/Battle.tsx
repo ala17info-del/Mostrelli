@@ -1,19 +1,19 @@
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import Animated, { FadeIn, SlideInDown, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from "react-native-reanimated";
+import Animated, { FadeIn, SlideInDown, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { colors, FONT } from "@/src/theme";
 
 import { sfx, SfxName } from "./audio";
 import { FX_LABEL, ITEMS, ItemId, MOVES, SPECIES, TypeId, TYPES } from "./data";
-import { HitFx } from "./BattleFx";
+import { HealFx, HitFx } from "./BattleFx";
 import { applyItem, attack, stageMult, catchChance, gainXp, knownMoves, Mon, monName, stats, xpReward } from "./engine";
 import { PixelSprite } from "./PixelSprite";
 import { hap, HpBar, PixelText } from "./ui";
 
-export type BattleSetup = { kind: "wild" | "trainer"; enemies: Mon[]; trainerName?: string; field?: "grass" | "beach" };
+export type BattleSetup = { kind: "wild" | "trainer"; enemies: Mon[]; trainerName?: string; field?: "grass" | "beach"; duel?: boolean };
 export type BattleResult = {
   outcome: "win" | "lose" | "flee" | "caught";
   party: Mon[];
@@ -36,7 +36,7 @@ function sfxFor(text: string): SfxName | null {
 
 type Fx = { target: "foe" | "me"; type: TypeId; dmg: number; crit: boolean; eff: number };
 type CondSnap = Record<string, { atk: number; def: number; spd: number; conf: number; burn: boolean }>;
-type Step = { text: string; php: number; ehp: number; fx?: Fx; conds?: CondSnap };
+type Step = { text: string; php: number; ehp: number; ps?: string; fx?: Fx; conds?: CondSnap; anim?: "throw" | "caught" | "fail" | "heal" };
 type Phase = "msg" | "menu" | "moves" | "switch" | "forceSwitch" | "bag" | "itemTarget";
 
 export function Battle({ setup, party: initialParty, items, onEnd }: { setup: BattleSetup; party: Mon[]; items: Partial<Record<ItemId, number>>; onEnd: (r: BattleResult) => void }) {
@@ -81,8 +81,21 @@ export function Battle({ setup, party: initialParty, items, onEnd }: { setup: Ba
   const foeO = useSharedValue(1);
   const meO = useSharedValue(1);
   const flashO = useSharedValue(0);
+  const foeScale = useSharedValue(1);
+  const jarP = useSharedValue(0);
+  const jarRot = useSharedValue(0);
+  const [jar, setJar] = useState(false);
+  const [healK, setHealK] = useState(0);
+  const [scene, setScene] = useState({ w: 390, h: 400 });
+  const jarStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: scene.w * (0.12 + 0.6 * jarP.value) },
+      { translateY: scene.h * (0.7 - 0.5 * jarP.value) - 110 * Math.sin(Math.PI * jarP.value) },
+      { rotate: `${jarP.value * 720 + jarRot.value}deg` },
+    ],
+  }));
   const [fxShow, setFxShow] = useState<(Fx & { k: number }) | null>(null);
-  const bobFoe = useAnimatedStyle(() => ({ opacity: foeO.value, transform: [{ translateY: bob.value * -4 }, { translateX: foeX.value }, { translateY: -Math.abs(foeX.value) * 0.6 }] }));
+  const bobFoe = useAnimatedStyle(() => ({ opacity: foeO.value, transform: [{ scale: foeScale.value }, { translateY: bob.value * -4 }, { translateX: foeX.value }, { translateY: -Math.abs(foeX.value) * 0.6 }] }));
   const bobMe = useAnimatedStyle(() => ({ opacity: meO.value, transform: [{ translateY: (1 - bob.value) * -4 }, { translateX: meX.value }, { translateY: -Math.abs(meX.value) * 0.6 }] }));
   const flashStyle = useAnimatedStyle(() => ({ opacity: flashO.value }));
   const [act, setAct] = useState(() => Math.max(0, P.current.findIndex((m) => m.hp > 0)));
@@ -126,6 +139,25 @@ export function Battle({ setup, party: initialParty, items, onEnd }: { setup: Ba
       flashO.value = withSequence(withTiming(0.55, { duration: 60 }), withTiming(0, { duration: 260 }));
       shake.value = withSequence(withTiming(-14, { duration: 40 }), withTiming(14, { duration: 40 }), withTiming(-8, { duration: 40 }), withTiming(8, { duration: 40 }), withTiming(0, { duration: 40 }));
     }
+    const an = steps[si]?.anim;
+    if (/si sta evolvendo/.test(cur)) {
+      meO.value = withSequence(...Array.from({ length: 6 }, (_, k) => withTiming(k % 2 ? 1 : 0.15, { duration: 140 })));
+      flashO.value = withDelay(800, withSequence(withTiming(0.9, { duration: 120 }), withTiming(0, { duration: 500 })));
+    }
+    if (an === "throw") {
+      setJar(true);
+      jarRot.value = 0;
+      jarP.value = 0;
+      jarP.value = withTiming(1, { duration: 600 });
+      foeScale.value = withDelay(560, withTiming(0, { duration: 220 }));
+    }
+    if (an === "caught") jarRot.value = withSequence(withTiming(-25, { duration: 120 }), withTiming(25, { duration: 160 }), withTiming(-15, { duration: 140 }), withTiming(0, { duration: 120 }));
+    if (an === "fail") {
+      jarRot.value = withSequence(withTiming(-25, { duration: 120 }), withTiming(25, { duration: 160 }), withTiming(0, { duration: 100 }));
+      foeScale.value = withDelay(380, withSequence(withTiming(1.25, { duration: 160 }), withTiming(1, { duration: 120 })));
+      setTimeout(() => setJar(false), 420);
+    }
+    if (an === "heal") setHealK(Date.now());
     if (!curFx) {
       setFxShow(null);
       return;
@@ -222,13 +254,21 @@ export function Battle({ setup, party: initialParty, items, onEnd }: { setup: Ba
     const meNow = P.current[a];
     if (foeNow.hp <= 0) {
       snap(list, `${monName(foeNow)} ${setup.kind === "wild" ? "selvatico" : "nemico"} è esausto!`, a, e);
-      for (const t of gainXp(meNow, xpReward(foeNow, setup.kind === "trainer"))) snap(list, t, a, e);
+      if (!setup.duel) {
+        const oldS = meNow.s;
+        let evolved = false;
+        for (const t of gainXp(meNow, xpReward(foeNow, setup.kind === "trainer"))) {
+          if (t.includes("è diventato")) evolved = true;
+          snap(list, t, a, e);
+          list[list.length - 1].ps = evolved ? meNow.s : oldS;
+        }
+      }
       const next = E.current.findIndex((m) => m.hp > 0);
       const meDown = meNow.hp <= 0;
       if (meDown) snap(list, `Anche ${monName(meNow)} è esausto!`, a, e);
       const anyAlive = P.current.some((m) => m.hp > 0);
       if (next >= 0 && meDown && !anyAlive) {
-        snap(list, "Non hai più mostri in grado di lottare... Ti gira la testa e svieni.", a, e);
+        snap(list, "Non hai più mostrelli in grado di lottare... Ti gira la testa e svieni.", a, e);
         play(list, () => finish("lose"));
         return;
       }
@@ -249,7 +289,7 @@ export function Battle({ setup, party: initialParty, items, onEnd }: { setup: Ba
       const alive = P.current.some((m) => m.hp > 0);
       if (alive) play(list, () => setPhase("forceSwitch"));
       else {
-        snap(list, "Non hai più mostri in grado di lottare... Ti gira la testa e svieni.", a, e);
+        snap(list, "Non hai più mostrelli in grado di lottare... Ti gira la testa e svieni.", a, e);
         play(list, () => finish("lose"));
       }
       return;
@@ -281,7 +321,7 @@ export function Battle({ setup, party: initialParty, items, onEnd }: { setup: Ba
   const tryCatch = () => {
     const list: Step[] = [];
     if (setup.kind === "trainer") {
-      play([{ text: "Non si rubano i mostri degli altri! Qui siamo gente onesta (quasi).", php: me.hp, ehp: foe.hp }], () => setPhase("menu"));
+      play([{ text: "Non si rubano i mostrelli degli altri! Qui siamo gente onesta (quasi).", php: me.hp, ehp: foe.hp }], () => setPhase("menu"));
       return;
     }
     if (left("vasetto") <= 0) {
@@ -290,15 +330,18 @@ export function Battle({ setup, party: initialParty, items, onEnd }: { setup: Ba
     }
     used.current.vasetto = (used.current.vasetto ?? 0) + 1;
     snap(list, "Lanci un Vasetto di Vetro...");
+    list[list.length - 1].anim = "throw";
     if (Math.random() < catchChance(foe)) {
       hap("success");
       snap(list, `Preso! ${monName(foe)} è nel vasetto. Chiudi bene il coperchio!`);
+      list[list.length - 1].anim = "caught";
       const caught = { ...foe };
       play(list, () => finish("caught", caught));
       return;
     }
     hap("error");
     snap(list, `Accidenti! ${monName(foe)} è uscito dal vasetto!`);
+    list[list.length - 1].anim = "fail";
     enemyTurn(list, act);
     resolve(list, act, ei);
   };
@@ -328,7 +371,14 @@ export function Battle({ setup, party: initialParty, items, onEnd }: { setup: Ba
 
   const applyOn = (i: number) => {
     if (!pending) return;
-    const r = applyItem(P.current[i], pending);
+    const kind = ITEMS[pending].kind;
+    const c = cnd(P.current[i].uid);
+    const r =
+      kind === "cureConf"
+        ? c.conf > 0 ? ((c.conf = 0), { ok: true, msg: `${monName(P.current[i])} non è più confuso! Recupera la lucidità.` }) : { ok: false, msg: `${monName(P.current[i])} non è confuso.` }
+        : kind === "cureBurn"
+          ? c.burn ? ((c.burn = false), { ok: true, msg: `${monName(P.current[i])} si rinfresca col gelato! Recupera dalla scottatura.` }) : { ok: false, msg: `${monName(P.current[i])} non è scottato.` }
+          : applyItem(P.current[i], pending);
     if (!r.ok) {
       play([{ text: r.msg, php: me.hp, ehp: foe.hp }], () => setPhase("bag"));
       return;
@@ -336,6 +386,7 @@ export function Battle({ setup, party: initialParty, items, onEnd }: { setup: Ba
     used.current[pending] = (used.current[pending] ?? 0) + 1;
     const list: Step[] = [];
     snap(list, `Usi ${ITEMS[pending].name}! ${r.msg}`);
+    if (i === act) list[list.length - 1].anim = "heal";
     setPending(null);
     enemyTurn(list, act);
     resolve(list, act, ei);
@@ -357,7 +408,7 @@ export function Battle({ setup, party: initialParty, items, onEnd }: { setup: Ba
 
   return (
     <Animated.View entering={FadeIn.duration(250)} style={[styles.root, { paddingTop: insets.top + 8 }]} testID="battle-screen">
-      <Animated.View style={[styles.scene, sceneStyle]}>
+      <Animated.View style={[styles.scene, sceneStyle]} onLayout={(e) => setScene({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
         <LinearGradient
           colors={setup.field === "beach" ? ["#7fc8e0", "#bfe6ef", "#f0d9a0"] : ["#9fd0a0", "#5f9a4e", "#2f5d34"]}
           style={StyleSheet.absoluteFill}
@@ -381,18 +432,28 @@ export function Battle({ setup, party: initialParty, items, onEnd }: { setup: Ba
           <View style={styles.spriteWrap}>
             <View style={[styles.ground, setup.field === "beach" && styles.groundBeach]} />
             <Animated.View style={bobMe}>
-              <PixelSprite name={me.s} size={120} flip testID="battle-player-sprite" />
+              <PixelSprite name={showing?.ps ?? me.s} size={120} flip testID="battle-player-sprite" />
             </Animated.View>
             {fxShow?.target === "me" && <HitFx key={fxShow.k} type={fxShow.type} dmg={fxShow.dmg} crit={fxShow.crit} eff={fxShow.eff} />}
           </View>
           <View style={styles.infoBox} testID="battle-player-info">
-            <PixelText style={styles.monName} numberOfLines={1}>{monName(me)}</PixelText>
+            <PixelText style={styles.monName} numberOfLines={1}>{monName({ ...me, s: showing?.ps ?? me.s })}</PixelText>
             <PixelText style={styles.lv}>Lv{me.lv}</PixelText>
             <HpBar hp={php} max={meMax} testID="battle-player-hp" />
             {chips(me, "battle-player-status", showing?.conds)}
             <PixelText style={styles.hpText} testID="battle-player-hp-text">{php}/{meMax} PV</PixelText>
           </View>
         </View>
+        {jar && (
+          <Animated.View pointerEvents="none" style={[styles.jar, jarStyle]} testID="battle-jar">
+            <PixelSprite name="vasetto" size={44} />
+          </Animated.View>
+        )}
+        {!!healK && (
+          <View pointerEvents="none" style={styles.healSpot}>
+            <HealFx key={healK} label="+PV" />
+          </View>
+        )}
         <Animated.View pointerEvents="none" style={[styles.flash, flashStyle]} />
       </Animated.View>
 
@@ -409,7 +470,7 @@ export function Battle({ setup, party: initialParty, items, onEnd }: { setup: Ba
             <View style={styles.grid}>
               <Cmd label="Lotta" color={colors.brandPrimary} fg={colors.onBrandPrimary} testID="battle-cmd-fight" onPress={() => setPhase("moves")} />
               <Cmd label="Zaino" color={colors.brandSecondary} fg={colors.onBrandSecondary} testID="battle-cmd-bag" onPress={() => setPhase("bag")} />
-              <Cmd label="Mostri" color={colors.brandTertiary} fg={colors.onBrandTertiary} testID="battle-cmd-switch" onPress={() => setPhase("switch")} />
+              <Cmd label="Mostrelli" color={colors.brandTertiary} fg={colors.onBrandTertiary} testID="battle-cmd-switch" onPress={() => setPhase("switch")} />
               <Cmd label="Fuga" color={colors.surfaceTertiary} fg={colors.onSurface} testID="battle-cmd-flee" onPress={flee} />
             </View>
           </Animated.View>
@@ -471,7 +532,7 @@ export function Battle({ setup, party: initialParty, items, onEnd }: { setup: Ba
         )}
         {(phase === "switch" || phase === "forceSwitch") && (
           <Animated.View entering={SlideInDown.duration(180)} style={{ maxHeight: 260 }}>
-            <PixelText style={styles.prompt}>{phase === "forceSwitch" ? "Chi mandi in campo?" : "Cambia mostro"}</PixelText>
+            <PixelText style={styles.prompt}>{phase === "forceSwitch" ? "Chi mandi in campo?" : "Cambia mostrello"}</PixelText>
             <ScrollView>
               {P.current.map((m, i) => (
                 <Pressable
@@ -526,6 +587,8 @@ const styles = StyleSheet.create({
   chipTxt: { fontSize: 11, color: colors.onBrandPrimary },
   fxHint: { fontSize: 11, color: colors.muted, marginTop: 2 },
   flash: { ...StyleSheet.absoluteFillObject, backgroundColor: "#fff8e1" },
+  jar: { position: "absolute", left: 0, top: 0 },
+  healSpot: { position: "absolute", left: 0, bottom: 20, width: 180, height: 180 },
   foeRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   meRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   infoBox: { width: "48%", backgroundColor: colors.surfaceSecondary, borderWidth: 2, borderColor: colors.onSurface, padding: 8, gap: 4 },

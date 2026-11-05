@@ -112,5 +112,6 @@ export function applyItem(m: Mon, id: ItemId): { ok: boolean; msg: string } {
     m.hp = Math.floor(max * it.amount);
     return { ok: true, msg: `${monName(m)} beve il Caffè Ristretto e riprende i sensi!` };
   }
+  if (it.kind === "cureConf" || it.kind === "cureBurn") return { ok: false, msg: `${it.name} si usa solo durante le lotte.` };
   return { ok: false, msg: "Non si può usare qui." };
 }

@@ -51,7 +51,7 @@ export default function Intro() {
           <Animated.View entering={FadeIn.duration(250)}>
             <PixelText style={styles.label}>Il tuo nome</PixelText>
             <TextInput testID="intro-name-input" style={styles.input} value={name} onChangeText={setName} maxLength={12} placeholder="es. Rossella" placeholderTextColor={colors.muted} />
-            <PixelText style={[styles.label, { marginTop: 24 }]}>Scegli il tuo primo mostro</PixelText>
+            <PixelText style={[styles.label, { marginTop: 24 }]}>Scegli il tuo primo mostrello</PixelText>
             {STARTERS.map((s) => {
               const sp = SPECIES[s];
               const on = pick === s;

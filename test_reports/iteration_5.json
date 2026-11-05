@@ -1,0 +1,48 @@
+{
+  "summary": "Iteration 5 (backend and frontend at 390x844). Backend: 14/14 pytest pass. Covered: duel create/mine/get (404 for unknown code, 400 for own code, lowercase code accepted), result incrementing the creator's wins/losses, Pydantic validation, Apple sign-in returning 401 on bad tokens and 422 when the token is missing, and email login. Frontend features working: A button is green and B is red; B toggles run with 'Corri!'/'Cammini' toasts and advances dialog; the center MENU pill opens the menu; walking slides smoothly with intermediate pixel positions; the camera follows; exits work both ways (Bologna<->Osteria); NPC collision blocks movement. World map /mappa shows 6 town cards with CURA/MARKET tags, boss status and SEI QUI. Sfida: code is generated, listed and copied; own code and unknown code show the right errors; accepting code XWCYJU starts a battle vs 'Rossella (sfida)'. After the win, the 'Sfida tra Amici' dialog appears, the player's party HP and items are unchanged, and the creator's losses went 0->1. Shop lists Digestivo 10€ and Gelato 10€, and buying works. In battle, Digestivo/Gelato on an unaffected mon show 'non è confuso'/'non è scottato' and are not consumed. heal-fx appears for a battle Brodino and for the healer NPC. Catch animation: jar flies, foe scale goes to 0, pops back to 1.24 then 1 on fail, and the jar stays and wobbles on success. A wild Crescentino Lv4 was met and caught. Mostrario shows /32. The Apple button is hidden on web. Problems found: (1) controls row overflows at 390px wide (document scrollWidth 410), so the A button and hint text are clipped and the page shifts sideways when you tap; (2) the Team screen and menu Zaino never show Digestivo/Gelato or an 'only in battle' note; (3) security: Apple login can link an existing account using an email the client sends. Not tested: Digestivo/Gelato actually curing CONF/SCOT, because confusion/burn could not be triggered reliably. Code path reviewed and looks correct.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/auth/apple", "issue": "SECURITY: email = claims.get('email') or body.email. If the Apple token has no email claim, the email the client sends in the body is used to find an existing email/password account, and apple_sub gets linked to it. Someone with a valid Apple token can take over any account by sending the victim's email (server.py:144-148). Only link using the verified email claim from the token, and never using body.email.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "POST /api/duel", "issue": "The party is stored as arbitrary list[dict] with no validation. A crafted party (unknown species id 's', lv 999, extra moves) is sent to every challenger: it can crash their Battle with SPECIES[m.s] undefined, or let the creator cheat. Validate s in SPECIES, lv 1-100 and moves with a Pydantic model."},
+      {"endpoint": "POST /api/duel/{code}/result", "issue": "No limit on reporting results: any user can post many times and inflate or deflate a friend's wins/losses. Consider one result per (code, challenger) or rate-limiting."},
+      {"endpoint": "POST /api/auth/apple", "issue": "PyJWKClient.get_signing_key_from_jwt makes a blocking (sync) HTTP call inside an async endpoint. Wrap it in asyncio.to_thread / run_in_threadpool."},
+      {"endpoint": "DELETE /api/duel/{code}", "issue": "There is no endpoint to delete or expire duel codes. Users cannot remove old codes, and /duel/mine shows only the latest 20."},
+      {"endpoint": "POST /api/auth/login", "issue": "A wrong password shorter than the minimum length returns 422 (validation) instead of 401. This is acceptable, but it reveals the password rules."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Game controls row", "issue": "Horizontal overflow at 390px wide: document.scrollWidth is 410. btn-a-interact is at x=342 with width 68 (right edge 410), and the 'A parla · B corri' hint is clipped. On web the whole page shifts about 20px left after a tap (seen in screenshots: 'Bologna' header cut off, shop modal offset). On 375px phones the A button would be clipped by about 35px. Total width = dpad(~174) + MENU pill 64 + A/B (68+16+68) + paddingHorizontal 40. Fix: shrink the round buttons to about 60, reduce the ab gap and padding, or make the controls flex/shrink (game.tsx:285-310, styles.round/ab/controls at 386-398).", "testID": "btn-a-interact", "priority": "HIGH"},
+      {"component": "Team screen / Menu Zaino", "issue": "Digestivo and Gelato do not appear in the team-items line (team.tsx:65) or in the menu 'Zaino' line. There is no button or 'usabile solo in lotta' note in the Team screen, so the review item 'in team screen they say usable only in battle' is not met. Players cannot see how many they own outside battle.", "testID": "team-items", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Game (healer)", "issues": ["The overworld heal-fx is centred on the whole map (StyleSheet.absoluteFill), not on the player. The sparkles show about 2 tiles above the player, over the sign. Consider placing them on the player sprite."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_duel_apple_iter5.py", "/app/test_reports/pytest/pytest_iter5.xml"],
+  "action_items": [
+    "HIGH: Fix the controls-row overflow in game.tsx so the A button and hint fit within 375-390px (scrollWidth must equal the viewport width).",
+    "HIGH (security): /auth/apple: do not use the client-sent body.email to link an existing account. Link only using the token's verified email claim.",
+    "MEDIUM: Show Digestivo/Gelato counts in team.tsx team-items and in the menu Zaino line, with an 'Usabile solo in lotta' note (or a disabled button that shows that message).",
+    "MEDIUM: Validate the duel party server-side (species exists, lv 1-100, valid moves). The client should also guard against an unknown species before starting a duel battle.",
+    "LOW: Limit duel result reporting per challenger; add a delete endpoint for duel codes.",
+    "LOW: Run the Apple JWKS fetch in a thread (it currently blocks the event loop).",
+    "LOW: startHold keeps the old interval if B (run) is toggled while holding the D-pad (game.tsx:118)."
+  ],
+  "critical_code_review_comments": [
+    "Duel battles throw away r.party and r.itemsUsed, so items used in a duel (Brodino, Tortellini) are free. This matches the 'no damage' design, but it is an infinite-heal exploit within the duel. Acceptable; just noting it.",
+    "Battle.tsx applyOn: cure items on a benched mon always say 'non è confuso/scottato', because conditions reset on switch. Correct behaviour.",
+    "No deprecated Expo packages found (no expo-av, expo-barcode-scanner or expo-background-fetch). The Apple button is gated by Platform.OS==='ios' and isAvailableAsync. app.json has usesAppleSignIn."
+  ],
+  "updated_files": ["/app/backend/tests/test_duel_apple_iter5.py (new)"],
+  "success_rate": {"backend": "100% (14/14)", "frontend": "~90% (all requested flows work; overflow bug and team-screen items note missing)"},
+  "seed_data_creation": "test_it4_a8f405@example.com save was edited via save_tool: items digestivo 2 / gelato 2 added (gelato now 3 after a UI purchase, money 1758), position moved several times (last x=8,y=13). The creator's duel XWCYJU now has losses=1 from the UI duel win. Pytest created test_it5_* users, which remain because there is no delete endpoint. The duel docs I created (2 from pytest + LG6EJ9 from the UI) were deleted by user_id/code.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Login via title-login-btn -> auth-email-input/auth-password-input -> auth-submit-btn -> title-continue-btn. Each browser_automation call is a fresh session, so log in every time. The D-pad needs mouse down/up on hover with a ~150ms hold. Bologna tiles: healer (2,12), stand at (3,12) dir left; shop NPC (13,3), stand at (13,4) dir up; grass (8,12)<->(8,13); east exit (15,8) -> osteria. Set the position via save_tool '{\"x\":..,\"y\":..,\"dir\":\"left\"}'. Duel code XWCYJU belongs to test@bologna.it. Foe scale can be read from the parent transform of battle-enemy-sprite. Confusion/burn cure was not exercised in the UI.",
+  "rca_of_issue": "Overflow: the controls row is flexDirection row with justifyContent space-between and fixed-width children whose total (~430px) is more than 390px. The 'right' column also holds the hint text, which makes it wider still."
+}

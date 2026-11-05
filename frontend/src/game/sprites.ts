@@ -119,6 +119,13 @@ export const SPRITES: Record<string, string[]> = {
     ".....kk.....", "...kkrrkk...", "..krwrwrwk..", ".krwnrwnrwk.", "krwrwrwrwrwk", "krrwkkkkwrrk",
     "kkkkkkkkkkkk", ".....kb.....", ".....kb.....", ".....kb.....", "....kyyk....", "...kyyyyk...",
   ],
+  crescentino: ["............", "..kkkkkkkk..", ".keeoeeoeek.", "keeeeeeeeeek", "kewnkeekwnek", "keeeeeeeeeek", "keeerrrreeek", "keoeeeeeeoek", ".keeeeeeeek.", "..kkkkkkkk..", "............", "............"],
+  lambruschino: [".....kk.....", "....kmmk....", "...kmmmmk...", "..kmmwmmmk..", ".kmmmmmmmmk.", ".kmwnmmwnmk.", "kmmmmmmmmmmk", "kmmmPPPPmmmk", "kmwmmmmmmwmk", ".kmmmmmmmmk.", "..kkkkkkkk..", "c..c....c..c"],
+  canalino: ["............", "......kkkk..", ".....kggggk.", "....kgwngggk", "...kggggkkk.", "..kgggk.....", ".kgggk......", ".kgggk......", "..kgggkk....", "...kggggkk..", "cccccccccccc", ".cccccccccc."],
+  scooterone: ["............", "........kk..", ".......kSk..", "..kkkkkkSk..", ".krrrrrrrk..", "krrwrrrrrrk.", "krrnrrrrrrrk", "kkkkkkkkkkkk", ".kSk....kSk.", "kSnSk..kSnSk", ".kSk....kSk.", "............"],
+  cappellaccio: ["............", "....kkkk....", "...kooook...", "..kooyyook..", ".kooooooook.", "koownoownook", "kooooooooook", "kooorrrroook", ".kooooooook.", "..kkkkkkkk..", "....gg......", "............"],
+  zuppone: ["............", "...kkkkkk...", "..kppppppk..", ".kppwppwppk.", ".kppnppnppk.", ".keeeeeeeek.", ".kyyyyyyyyk.", ".kPPPPPPPPk.", ".kppkkkkppk.", ".kppppppppk.", "..kkkkkkkk..", "............"],
+  vasetto: ["............", "...kkkkkk...", "...kSSSSk...", "..kkkkkkkk..", "..kcwcccck..", ".kcwcccccck.", ".kcwcccccck.", ".kcccccccck.", ".kcccccccck.", "..kccccck...", "...kkkkkk...", "............"],
   person_back: [
     "...kkkkkk...", "..kAAAAAAk..", ".kAAAAAAAAk.", "..kBBBBBBk..", "..kBBBBBBk..", "..kkBBBBkk..",
     "..kkCCCCkk..", ".khCCCCCChk.", ".khCCCCCChk.", "..kSSSSSSk..", "..kSk..kSk..", "..kkk..kkk..",
@@ -131,4 +138,20 @@ export const SPRITES: Record<string, string[]> = {
     "...kkkkkk...", "..kAAAAAAk..", ".kAAAAAAAAk.", "..khhhhhhk..", "..khnhhnhk..", "..khhhhhhk..",
     "..kkCCCCkk..", ".khCCCCCChk.", ".khCCCCCChk.", "..kSSSSSSk..", "..kSk..kSk..", "..kkk..kkk..",
   ],
+};
+
+// Evolved forms that reuse a base drawing with a new palette.
+export const SKINS: Record<string, { base: string; look: Record<string, string> }> = {
+  mortadellone: { base: "mortazzone", look: {"p": "#e57373", "P": "#b71c1c", "w": "#fff3e0", "g": "#1b5e20"} },
+  squacquerona: { base: "squacquerone", look: {"w": "#fff59d", "e": "#ff8f00", "n": "#1b5e20", "k": "#5d4037"} },
+  passatellaccio: { base: "passatellone", look: {"o": "#c77800", "c": "#ffe0b2"} },
+  piadinazza: { base: "piadinone", look: {"e": "#ffe082", "o": "#8d4e00", "g": "#1b5e20"} },
+  zanzarazza: { base: "zanzarone", look: {"S": "#7e57c2", "c": "#e1f5fe", "n": "#ff1744", "k": "#311b92"} },
+  turbonzo: { base: "pistonzo", look: {"r": "#ffeb3b", "s": "#212121", "S": "#b71c1c"} },
+  vaporiera: { base: "vaporella", look: {"w": "#e0f7fa", "c": "#80deea", "o": "#ff7043"} },
+  tandemone: { base: "biciclone", look: {"g": "#c62828", "S": "#fbc02d"} },
+  crescentone: { base: "crescentino", look: {"e": "#ffcc80", "o": "#bf360c", "r": "#e91e63"} },
+  gabbianazzo: { base: "gabbianone", look: {"w": "#eceff1", "S": "#263238", "y": "#ff6f00"} },
+  lambruscone: { base: "lambruschino", look: {"m": "#d81b60", "P": "#ff80ab", "k": "#560027"} },
+  zuppissima: { base: "zuppone", look: {"p": "#f06292", "y": "#ffd54f", "P": "#880e4f"} },
 };

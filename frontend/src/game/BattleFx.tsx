@@ -77,6 +77,7 @@ export function HitFx({ type, dmg, crit, eff }: { type: TypeId; dmg: number; cri
 const styles = StyleSheet.create({
   wrap: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center" },
   particle: { position: "absolute" },
+  glow: { position: "absolute", width: 110, height: 110, borderRadius: 999, backgroundColor: "#66bb6a" },
   dmg: {
     position: "absolute",
     fontFamily: FONT,
@@ -86,3 +87,33 @@ const styles = StyleSheet.create({
     textShadowRadius: 0,
   },
 });
+
+function Spark({ i }: { i: number }) {
+  const p = useSharedValue(0);
+  useEffect(() => {
+    p.value = withTiming(1, { duration: 900 + (i % 4) * 120, easing: Easing.out(Easing.quad) });
+  }, [p, i]);
+  const x = ((i * 37) % 80) - 40;
+  const st = useAnimatedStyle(() => ({
+    opacity: p.value < 0.7 ? 1 : (1 - p.value) * 3.3,
+    transform: [{ translateX: x + Math.sin(p.value * 6 + i) * 6 }, { translateY: 30 - 90 * p.value }, { rotate: "45deg" }],
+  }));
+  return <Animated.View style={[styles.particle, { width: i % 3 ? 6 : 10, height: i % 3 ? 6 : 10, backgroundColor: ["#66bb6a", "#ffffff", "#b9f6ca", "#fbc02d"][i % 4] }, st]} />;
+}
+
+export function HealFx({ label }: { label?: string }) {
+  const g = useSharedValue(0);
+  useEffect(() => {
+    g.value = withTiming(1, { duration: 1100 });
+  }, [g]);
+  const glow = useAnimatedStyle(() => ({ opacity: g.value < 0.3 ? g.value * 2 : (1 - g.value) * 0.85, transform: [{ scale: 0.6 + g.value * 0.8 }] }));
+  return (
+    <View pointerEvents="none" style={styles.wrap} testID="heal-fx">
+      <Animated.View style={[styles.glow, glow]} />
+      {Array.from({ length: 16 }).map((_, i) => (
+        <Spark key={i} i={i} />
+      ))}
+      {!!label && <Animated.Text style={[styles.dmg, { color: "#b9f6ca" }, glow]}>{label}</Animated.Text>}
+    </View>
+  );
+}

@@ -28,9 +28,9 @@ export default function Title() {
       <LinearGradient colors={["rgba(18,18,18,0.35)", "rgba(18,18,18,0.85)", colors.surface]} style={StyleSheet.absoluteFill} />
       <View style={[styles.content, { paddingTop: insets.top + 48 }]}>
         <Animated.View entering={FadeInUp.duration(500)}>
-          <PixelText style={styles.kicker}>— EMILIA EDITION —</PixelText>
-          <PixelText style={styles.title} testID="title-text">BOLOGNA{"\n"}MONSTRI</PixelText>
-          <PixelText style={styles.sub}>Tortellini, nebbia e mostri selvatici tra Bologna, Osteria Grande, Castel San Pietro, Imola e Ferrara.</PixelText>
+          <PixelText style={styles.kicker}>— EMILIA-ROMAGNA EDITION —</PixelText>
+          <PixelText style={styles.title} testID="title-text">MOSTRELLI</PixelText>
+          <PixelText style={styles.sub}>Tortellini, nebbia e mostrelli selvatici tra Bologna, Castel Maggiore, Altedo, Ferrara, Osteria Grande, Castel San Pietro, Imola e la Riviera.</PixelText>
         </Animated.View>
         <Animated.View entering={FadeInUp.delay(200).duration(500)} style={styles.sprites}>
           <PixelSprite name="tortellotto" size={72} />

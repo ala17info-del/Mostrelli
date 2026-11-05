@@ -45,7 +45,10 @@ type Ctx = {
   reset: () => Promise<void>;
   loadError: boolean;
   reload: () => void;
+  duel: Duel | null;
+  setDuel: (d: Duel | null) => void;
 };
+export type Duel = { code: string; name: string; party: Mon[] };
 
 const GameCtx = createContext<Ctx | null>(null);
 
@@ -55,6 +58,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [sync, setSync] = useState<SyncState>("saved");
   const [loadError, setLoadError] = useState(false);
+  const [duel, setDuel] = useState<Duel | null>(null);
   const latest = useRef<Save | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -127,7 +131,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     setSaveState(null);
   }, []);
 
-  return <GameCtx.Provider value={{ save, loading, sync, setSave, flush, reset, loadError, reload: load }}>{children}</GameCtx.Provider>;
+  return <GameCtx.Provider value={{ save, loading, sync, setSave, flush, reset, loadError, reload: load, duel, setDuel }}>{children}</GameCtx.Provider>;
 }
 
 export function useGame() {

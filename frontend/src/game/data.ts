@@ -48,6 +48,12 @@ export const MOVES: Record<string, Move> = {
   onda: { name: "Onda Anomala", type: "terme", power: 75, acc: 90, fx: { k: "spdDown", p: 30 } },
   musica: { name: "Musica a Palla", type: "motore", power: 75, acc: 90, fx: { k: "confuse", p: 30 } },
   furto: { name: "Furto di Piadina", type: "chiacchiera", power: 60, acc: 100, fx: { k: "atkDown", p: 30 } },
+  tagliatella: { name: "Frusta di Tagliatella", type: "sugo", power: 55, acc: 95, fx: { k: "atkDown", p: 20 } },
+  bollicine: { name: "Bollicine Frizzanti", type: "terme", power: 50, acc: 100, fx: { k: "confuse", p: 20 } },
+  clacson: { name: "Clacson Insistente", type: "motore", power: 55, acc: 95, fx: { k: "spdDown", p: 30 } },
+  zucca: { name: "Zucca Rotolante", type: "campi", power: 60, acc: 95 },
+  pettegolezzo: { name: "Pettegolezzo di Paese", type: "chiacchiera", power: 50, acc: 100, fx: { k: "defDown", p: 50 } },
+  nebbiafitta: { name: "Nebbia Fitta", type: "nebbia", power: 60, acc: 95, fx: { k: "selfDefUp", p: 30 } },
   ombra: { name: "Ombra di Prima Fila", type: "campi", power: 70, acc: 95, fx: { k: "selfDefUp", p: 40 } },
 };
 
@@ -63,38 +69,59 @@ export const SPECIES_LIST: Species[] = [
   sp({ id: "tortellotto", num: 1, name: "Tortellotto", type: "sugo", hp: 45, atk: 52, def: 43, spd: 60, catchRate: 0.4, moves: [["sberla", 1], ["ragu", 1], ["brodo", 10], ["forno", 20]], desc: "Un tortellino ripieno di orgoglio bolognese. Se lo chiami 'raviolo' ti morde il naso.", evo: { to: "tortellone", lv: 16 } }),
   sp({ id: "fanghino", num: 2, name: "Fanghino", type: "terme", hp: 50, atk: 45, def: 55, spd: 45, catchRate: 0.4, moves: [["sberla", 1], ["fango", 1], ["vapore", 10], ["sauna", 20]], desc: "Rana di fango termale. Giura che fa benissimo alla pelle, lo dice suo cugino quasi medico.", evo: { to: "fangone", lv: 16 } }),
   sp({ id: "grappolino", num: 3, name: "Grappolino", type: "campi", hp: 48, atk: 49, def: 50, spd: 50, catchRate: 0.4, moves: [["sberla", 1], ["grappolo", 1], ["vendemmia", 10], ["trattore", 20]], desc: "Grappolo d'uva dei colli con le gambe. Alle quattro del pomeriggio è già allegro.", evo: { to: "vendemmione", lv: 16 } }),
-  sp({ id: "mortazzone", num: 4, name: "Mortazzone", type: "chiacchiera", hp: 70, atk: 50, def: 55, spd: 30, catchRate: 0.6, moves: [["sberla", 1], ["chiacchierata", 8], ["lamentela", 16], ["brodo", 22]], desc: "Maiale rosa a fette con pistacchi. Si offende a morte se lo chiami 'Bologna' all'americana." }),
+  sp({ id: "mortazzone", num: 4, name: "Mortazzone", type: "chiacchiera", hp: 70, atk: 50, def: 55, spd: 30, catchRate: 0.6, moves: [["sberla", 1], ["chiacchierata", 8], ["lamentela", 16], ["brodo", 22]], desc: "Maiale rosa a fette con pistacchi. Si offende a morte se lo chiami 'Bologna' all'americana.", evo: { to: "mortadellone", lv: 20 } }),
   sp({ id: "umarellino", num: 5, name: "Umarellino", type: "chiacchiera", hp: 40, atk: 35, def: 60, spd: 25, catchRate: 0.7, moves: [["sberla", 1], ["chiacchierata", 5], ["lamentela", 12], ["foschia", 18]], desc: "Spiritello pensionato con le mani dietro la schiena. Compare davanti a ogni cantiere per criticare.", evo: { to: "umarellone", lv: 14 } }),
-  sp({ id: "zanzarone", num: 6, name: "Zanzarone", type: "nebbia", hp: 35, atk: 55, def: 35, spd: 75, catchRate: 0.5, moves: [["sberla", 1], ["foschia", 1], ["puntura", 12], ["nebbione", 18]], desc: "Zanzara della pianura grande come un piccione. Da giugno a settembre comanda lei." }),
+  sp({ id: "zanzarone", num: 6, name: "Zanzarone", type: "nebbia", hp: 35, atk: 55, def: 35, spd: 75, catchRate: 0.5, moves: [["sberla", 1], ["foschia", 1], ["puntura", 12], ["nebbione", 18]], desc: "Zanzara della pianura grande come un piccione. Da giugno a settembre comanda lei.", evo: { to: "zanzarazza", lv: 24 } }),
   sp({ id: "nebbiolone", num: 7, name: "Nebbiolone", type: "nebbia", hp: 55, atk: 50, def: 60, spd: 40, catchRate: 0.45, moves: [["foschia", 1], ["sberla", 1], ["nebbione", 12], ["puntura", 22]], desc: "Fantasma di nebbia ferrarese. Lo vedi solo nei giorni in cui non c'è." }),
   sp({ id: "salamone", num: 8, name: "Salamone", type: "sugo", hp: 65, atk: 60, def: 50, spd: 35, catchRate: 0.45, moves: [["sberla", 1], ["ragu", 1], ["brodo", 10], ["forno", 18]], desc: "Salama da sugo vivente. Cuoce da sei ore e non ha nessuna fretta." }),
-  sp({ id: "biciclone", num: 9, name: "Biciclone", type: "motore", hp: 45, atk: 55, def: 45, spd: 80, catchRate: 0.45, moves: [["sberla", 1], ["rombo", 1], ["sgommata", 12], ["girovel", 20]], desc: "Serpente con due ruote. Suona il campanello e non si ferma mai, nemmeno col rosso." }),
-  sp({ id: "pistonzo", num: 10, name: "Pistonzo", type: "motore", hp: 50, atk: 65, def: 55, spd: 65, catchRate: 0.45, moves: [["sberla", 1], ["rombo", 1], ["sgommata", 10], ["girovel", 18]], desc: "Scarabeo con pistoni al posto delle zampe. Vive vicino all'autodromo e sogna il podio." }),
-  sp({ id: "vaporella", num: 11, name: "Vaporella", type: "terme", hp: 45, atk: 50, def: 45, spd: 70, catchRate: 0.5, moves: [["sberla", 1], ["fango", 1], ["vapore", 10], ["sauna", 20]], desc: "Uccellino fatto di vapore termale. Profuma leggermente di zolfo e di accappatoio." }),
+  sp({ id: "biciclone", num: 9, name: "Biciclone", type: "motore", hp: 45, atk: 55, def: 45, spd: 80, catchRate: 0.45, moves: [["sberla", 1], ["rombo", 1], ["sgommata", 12], ["girovel", 20]], desc: "Serpente con due ruote. Suona il campanello e non si ferma mai, nemmeno col rosso.", evo: { to: "tandemone", lv: 24 } }),
+  sp({ id: "pistonzo", num: 10, name: "Pistonzo", type: "motore", hp: 50, atk: 65, def: 55, spd: 65, catchRate: 0.45, moves: [["sberla", 1], ["rombo", 1], ["sgommata", 10], ["girovel", 18]], desc: "Scarabeo con pistoni al posto delle zampe. Vive vicino all'autodromo e sogna il podio.", evo: { to: "turbonzo", lv: 22 } }),
+  sp({ id: "vaporella", num: 11, name: "Vaporella", type: "terme", hp: 45, atk: 50, def: 45, spd: 70, catchRate: 0.5, moves: [["sberla", 1], ["fango", 1], ["vapore", 10], ["sauna", 20]], desc: "Uccellino fatto di vapore termale. Profuma leggermente di zolfo e di accappatoio.", evo: { to: "vaporiera", lv: 22 } }),
   sp({ id: "cinghialotto", num: 12, name: "Cinghialotto", type: "campi", hp: 60, atk: 65, def: 50, spd: 40, catchRate: 0.5, moves: [["sberla", 1], ["grappolo", 1], ["vendemmia", 10], ["trattore", 16]], desc: "Cinghiale delle colline. Distrugge le vigne e poi se ne vanta al bar.", evo: { to: "cinghialone", lv: 18 } }),
-  sp({ id: "squacquerone", num: 13, name: "Squacquerone", type: "chiacchiera", hp: 60, atk: 40, def: 45, spd: 35, catchRate: 0.65, moves: [["sberla", 1], ["fango", 4], ["chiacchierata", 10], ["lamentela", 18]], desc: "Formaggio molle e chiacchierone. Si spalma su qualsiasi conversazione, invitato o no." }),
-  sp({ id: "piadinone", num: 14, name: "Piadinone", type: "campi", hp: 55, atk: 50, def: 65, spd: 30, catchRate: 0.55, moves: [["sberla", 1], ["grappolo", 1], ["vendemmia", 10], ["trattore", 18]], desc: "Tartaruga col guscio di piadina. Viene dalla Romagna e non smette un secondo di ricordartelo." }),
-  sp({ id: "passatellone", num: 15, name: "Passatellone", type: "sugo", hp: 50, atk: 55, def: 45, spd: 55, catchRate: 0.55, moves: [["sberla", 1], ["ragu", 1], ["brodo", 9], ["forno", 19]], desc: "Verme di passatelli che nuota nel brodo. Si arriccia tutto quando è contento." }),
+  sp({ id: "squacquerone", num: 13, name: "Squacquerone", type: "chiacchiera", hp: 60, atk: 40, def: 45, spd: 35, catchRate: 0.65, moves: [["sberla", 1], ["fango", 4], ["chiacchierata", 10], ["lamentela", 18]], desc: "Formaggio molle e chiacchierone. Si spalma su qualsiasi conversazione, invitato o no.", evo: { to: "squacquerona", lv: 18 } }),
+  sp({ id: "piadinone", num: 14, name: "Piadinone", type: "campi", hp: 55, atk: 50, def: 65, spd: 30, catchRate: 0.55, moves: [["sberla", 1], ["grappolo", 1], ["vendemmia", 10], ["trattore", 18]], desc: "Tartaruga col guscio di piadina. Viene dalla Romagna e non smette un secondo di ricordartelo.", evo: { to: "piadinazza", lv: 20 } }),
+  sp({ id: "passatellone", num: 15, name: "Passatellone", type: "sugo", hp: 50, atk: 55, def: 45, spd: 55, catchRate: 0.55, moves: [["sberla", 1], ["ragu", 1], ["brodo", 9], ["forno", 19]], desc: "Verme di passatelli che nuota nel brodo. Si arriccia tutto quando è contento.", evo: { to: "passatellaccio", lv: 20 } }),
   sp({ id: "portichino", num: 16, name: "Portichino", type: "chiacchiera", hp: 80, atk: 70, def: 80, spd: 30, catchRate: 0.25, moves: [["sberla", 1], ["chiacchierata", 1], ["lamentela", 10], ["forno", 15]], desc: "Golem fatto di portici. Ti ripara sempre dalla pioggia, ma poi ti chiede 600 euro d'affitto." }),
   sp({ id: "tortellone", num: 17, name: "Tortellone", type: "sugo", hp: 78, atk: 84, def: 70, spd: 80, catchRate: 0.15, moves: [["ragu", 1], ["brodo", 1], ["forno", 16], ["lamentela", 24]], desc: "Tortellotto diventato gigante a forza di domeniche dalla nonna. Ripieno di carne e di arroganza." }),
   sp({ id: "fangone", num: 18, name: "Fangone", type: "terme", hp: 82, atk: 75, def: 85, spd: 60, catchRate: 0.15, moves: [["fango", 1], ["vapore", 1], ["sauna", 16], ["onda", 26]], desc: "Rospo termale enorme. Chiede l'impegnativa del medico prima di ogni lotta." }),
   sp({ id: "vendemmione", num: 19, name: "Vendemmione", type: "campi", hp: 80, atk: 80, def: 80, spd: 65, catchRate: 0.15, moves: [["grappolo", 1], ["vendemmia", 1], ["trattore", 16], ["ombra", 26]], desc: "Grappolo maturo dei colli. Dopo le sei di sera parla solo in dialetto." }),
   sp({ id: "umarellone", num: 20, name: "Umarellone", type: "chiacchiera", hp: 72, atk: 60, def: 92, spd: 35, catchRate: 0.2, moves: [["chiacchierata", 1], ["lamentela", 1], ["foschia", 14], ["furto", 22]], desc: "Umarell anziano col bastone. Ha supervisionato tre generazioni di cantieri senza mai lavorarci." }),
   sp({ id: "cinghialone", num: 21, name: "Cinghialone", type: "campi", hp: 92, atk: 95, def: 70, spd: 50, catchRate: 0.15, moves: [["grappolo", 1], ["vendemmia", 1], ["trattore", 18], ["ombra", 26]], desc: "Cinghiale dei colli con zanne da sagra. I cacciatori lo raccontano, nessuno l'ha mai preso." }),
-  sp({ id: "gabbianone", num: 22, name: "Gabbianone", type: "chiacchiera", hp: 55, atk: 68, def: 45, spd: 85, catchRate: 0.45, moves: [["sberla", 1], ["furto", 1], ["chiacchierata", 18], ["lamentela", 24]], desc: "Gabbiano enorme che ruba le piadine di mano ai turisti. Non prova alcuna vergogna." }),
+  sp({ id: "gabbianone", num: 22, name: "Gabbianone", type: "chiacchiera", hp: 55, atk: 68, def: 45, spd: 85, catchRate: 0.45, moves: [["sberla", 1], ["furto", 1], ["chiacchierata", 18], ["lamentela", 24]], desc: "Gabbiano enorme che ruba le piadine di mano ai turisti. Non prova alcuna vergogna.", evo: { to: "gabbianazzo", lv: 28 } }),
   sp({ id: "vongolino", num: 23, name: "Vongolino", type: "terme", hp: 50, atk: 48, def: 88, spd: 30, catchRate: 0.5, moves: [["fango", 1], ["vapore", 1], ["onda", 20], ["chiacchierata", 22]], desc: "Vongola di Riviera. Si chiude a riccio quando sente parlare di prezzi degli spaghetti allo scoglio." }),
   sp({ id: "medusella", num: 24, name: "Medusella", type: "terme", hp: 50, atk: 62, def: 50, spd: 62, catchRate: 0.5, moves: [["fango", 1], ["vapore", 1], ["onda", 19], ["puntura", 24]], desc: "Medusa d'agosto. Compare sempre quando hai appena deciso di fare il bagno." }),
   sp({ id: "discotecco", num: 25, name: "Discotecco", type: "motore", hp: 55, atk: 72, def: 50, spd: 78, catchRate: 0.4, moves: [["rombo", 1], ["sgommata", 1], ["musica", 20], ["girovel", 24]], desc: "Palla da discoteca vivente. Esce alle due di notte, rientra alle nove col cornetto." }),
   sp({ id: "ombrellone", num: 26, name: "Ombrellone", type: "campi", hp: 68, atk: 58, def: 72, spd: 40, catchRate: 0.45, moves: [["sberla", 1], ["grappolo", 1], ["ombra", 19], ["furto", 23]], desc: "Ombrellone di prima fila. Costa più di un affitto in centro, e lo sa benissimo." }),
+  sp({ id: "crescentino", num: 27, name: "Crescentino", type: "sugo", hp: 55, atk: 55, def: 55, spd: 50, catchRate: 0.6, moves: [["sberla", 1], ["ragu", 1], ["tagliatella", 12], ["brodo", 18]], desc: "Crescentina fritta e gonfia d'orgoglio. Senza mortadella accanto si sente nuda.", evo: { to: "crescentone", lv: 20 } }),
+  sp({ id: "lambruschino", num: 28, name: "Lambruschino", type: "terme", hp: 50, atk: 55, def: 50, spd: 65, catchRate: 0.5, moves: [["fango", 1], ["bollicine", 8], ["vapore", 14], ["onda", 22]], desc: "Goccia frizzante dei colli. Dopo un bicchiere diventa amico di tutti.", evo: { to: "lambruscone", lv: 22 } }),
+  sp({ id: "canalino", num: 29, name: "Canalino", type: "terme", hp: 50, atk: 60, def: 55, spd: 60, catchRate: 0.4, moves: [["fango", 1], ["bollicine", 1], ["onda", 18], ["nebbiafitta", 22]], desc: "Anguilla dei canali nascosti di Bologna. Spunta dalla finestrella e ti spaventa." }),
+  sp({ id: "scooterone", num: 30, name: "Scooterone", type: "motore", hp: 55, atk: 65, def: 55, spd: 75, catchRate: 0.45, moves: [["rombo", 1], ["clacson", 10], ["sgommata", 16], ["girovel", 22]], desc: "Motorino da lungomare. Due persone sopra, tre borse frigo e nessun casco." }),
+  sp({ id: "cappellaccio", num: 31, name: "Cappellaccio", type: "campi", hp: 60, atk: 55, def: 60, spd: 45, catchRate: 0.45, moves: [["grappolo", 1], ["zucca", 10], ["vendemmia", 16], ["trattore", 22]], desc: "Pasta ripiena di zucca ferrarese. Guai a chiamarla tortello: si offende." }),
+  sp({ id: "zuppone", num: 32, name: "Zuppone", type: "chiacchiera", hp: 65, atk: 50, def: 60, spd: 40, catchRate: 0.5, moves: [["sberla", 1], ["pettegolezzo", 8], ["chiacchierata", 14], ["lamentela", 20]], desc: "Zuppa inglese a strati. Sa tutti i fatti del paese, e li racconta tutti.", evo: { to: "zuppissima", lv: 21 } }),
+  sp({ id: "mortadellone", num: 0, name: "Mortadellone", type: "chiacchiera", hp: 95, atk: 75, def: 77, spd: 48, catchRate: 0.15, moves: [["sberla", 1], ["chiacchierata", 8], ["lamentela", 16], ["brodo", 22]], desc: "Mortadella gigante IGP. Pesa come un'utilitaria e profuma come la domenica." }),
+  sp({ id: "squacquerona", num: 0, name: "Squacquerona", type: "chiacchiera", hp: 85, atk: 65, def: 67, spd: 53, catchRate: 0.15, moves: [["sberla", 1], ["fango", 4], ["chiacchierata", 10], ["lamentela", 18]], desc: "Squacquerone stagionato in chiacchiere. Ormai conosce i segreti di tutta la Romagna." }),
+  sp({ id: "passatellaccio", num: 0, name: "Passatellaccio", type: "sugo", hp: 75, atk: 80, def: 67, spd: 73, catchRate: 0.15, moves: [["sberla", 1], ["ragu", 1], ["brodo", 9], ["forno", 19]], desc: "Passatello robusto cotto in brodo di cappone. Si annoda per farti paura." }),
+  sp({ id: "piadinazza", num: 0, name: "Piadinazza", type: "campi", hp: 80, atk: 75, def: 87, spd: 48, catchRate: 0.15, moves: [["sberla", 1], ["grappolo", 1], ["vendemmia", 10], ["trattore", 18]], desc: "Tartaruga con piadina doppia farcita. Corazza alta, opinioni ancora più alte." }),
+  sp({ id: "zanzarazza", num: 0, name: "Zanzarazza", type: "nebbia", hp: 60, atk: 80, def: 57, spd: 93, catchRate: 0.15, moves: [["sberla", 1], ["foschia", 1], ["puntura", 12], ["nebbione", 18]], desc: "Regina delle zanzare del Po. L'autan le fa il solletico." }),
+  sp({ id: "turbonzo", num: 0, name: "Turbonzo", type: "motore", hp: 75, atk: 90, def: 77, spd: 83, catchRate: 0.15, moves: [["sberla", 1], ["rombo", 1], ["sgommata", 10], ["girovel", 18]], desc: "Scarabeo col turbo. Fa il giro dell'autodromo in un minuto e mezzo, pit-stop compreso." }),
+  sp({ id: "vaporiera", num: 0, name: "Vaporiera", type: "terme", hp: 70, atk: 75, def: 67, spd: 88, catchRate: 0.15, moves: [["sberla", 1], ["fango", 1], ["vapore", 10], ["sauna", 20]], desc: "Uccello di vapore bollente. Quando passa, tutti si sentono in sauna." }),
+  sp({ id: "tandemone", num: 0, name: "Tandemone", type: "motore", hp: 70, atk: 80, def: 67, spd: 98, catchRate: 0.15, moves: [["sberla", 1], ["rombo", 1], ["sgommata", 12], ["girovel", 20]], desc: "Bicicletta a due posti con la testa di serpente. Pedala controvento e non si lamenta mai." }),
+  sp({ id: "crescentone", num: 0, name: "Crescentone", type: "sugo", hp: 80, atk: 80, def: 77, spd: 68, catchRate: 0.15, moves: [["sberla", 1], ["ragu", 1], ["tagliatella", 12], ["brodo", 18]], desc: "Crescentina gigante farcita di salumi. Il re dei taglieri bolognesi." }),
+  sp({ id: "gabbianazzo", num: 0, name: "Gabbianazzo", type: "chiacchiera", hp: 80, atk: 93, def: 67, spd: 103, catchRate: 0.15, moves: [["sberla", 1], ["furto", 1], ["chiacchierata", 18], ["lamentela", 24]], desc: "Il terrore dei lidi. Ruba piadine, gelati e pure gli occhiali da sole." }),
+  sp({ id: "lambruscone", num: 0, name: "Lambruscone", type: "terme", hp: 75, atk: 80, def: 72, spd: 83, catchRate: 0.15, moves: [["fango", 1], ["bollicine", 8], ["vapore", 14], ["onda", 22]], desc: "Fiasco di frizzante dei colli. Le sue bollicine stordiscono anche i più sobri." }),
+  sp({ id: "zuppissima", num: 0, name: "Zuppissima", type: "chiacchiera", hp: 90, atk: 75, def: 82, spd: 58, catchRate: 0.15, moves: [["sberla", 1], ["pettegolezzo", 8], ["chiacchierata", 14], ["lamentela", 20]], desc: "Zuppa inglese a dieci strati con alchermes doppio. Sa i segreti di ogni paese." }),
 ];
+SPECIES_LIST.forEach((x, i) => (x.num = i + 1));
 export const SPECIES: Record<string, Species> = Object.fromEntries(SPECIES_LIST.map((s) => [s.id, s]));
 export const STARTERS = ["tortellotto", "fanghino", "grappolino"];
 
 export const ITEMS = {
-  vasetto: { name: "Vasetto di Vetro", price: 8, kind: "catch", amount: 0, desc: "Per catturare i mostri selvatici. Lavato a mano dalla nonna." },
+  vasetto: { name: "Vasetto di Vetro", price: 8, kind: "catch", amount: 0, desc: "Per catturare i mostrelli selvatici. Lavato a mano dalla nonna." },
   brodino: { name: "Brodino Caldo", price: 5, kind: "heal", amount: 25, desc: "Cura 25 PV. Fatto col cappone, come Dio comanda." },
   tortellini: { name: "Tortellini in Brodo", price: 15, kind: "heal", amount: 70, desc: "Cura 70 PV. Trecento tortellini chiusi a mano, uno per uno." },
-  caffe: { name: "Caffè Ristretto", price: 25, kind: "revive", amount: 0.5, desc: "Risveglia un mostro esausto con metà dei PV. Corretto, ovviamente." },
+  digestivo: { name: "Digestivo della Casa", price: 10, kind: "cureConf", amount: 0, desc: "Cura la confusione. Solo in lotta. Fatto dallo zio, non chiedere cosa c'è dentro." },
+  gelato: { name: "Gelato Artigianale", price: 10, kind: "cureBurn", amount: 0, desc: "Cura le scottature. Solo in lotta. Gusto crema, il più serio." },
+  caffe: { name: "Caffè Ristretto", price: 25, kind: "revive", amount: 0.5, desc: "Risveglia un mostrello esausto con metà dei PV. Corretto, ovviamente." },
 } as const;
 export type ItemId = keyof typeof ITEMS;
 
@@ -117,6 +144,7 @@ export type GameMap = {
   exits: { x: number; y: number; to: string; tx: number; ty: number }[];
   heal: { x: number; y: number };
   wild: [string, number, number, number][];
+  music?: string;
   npcs: Npc[];
   signs: Record<string, string>;
 };
@@ -125,16 +153,16 @@ const L = (A: string, C: string) => ({ A, C });
 
 export const MAPS: Record<string, GameMap> = {
   bologna: {
-    id: "bologna", name: "Bologna",
+    id: "bologna", name: "Bologna", music: "bologna",
     tiles: [
       "TTTTTTT.TTTTTTTT", "TGGGGGT.TBBTRRRT", "TGGGGG..TBBTHDHT", "TT,,,,..,BB,,.,T",
       "TRRRT,.......,,T", "THDHT,PPPPPPP.,T", "T,.,,,PCCCCCP.,T", "T,.,,,PCCCCCP.,T",
       "T,.........CC...", "T,,,S,PCCCCCP.,T", "TRRRT,PPPPPPP.,T", "THDHT,.......GGT",
       "T,.,,,,GGGG,,GGT", "TFF,,,,GGGG,,GGT", "TFF,,,,GGGG,,GGT", "TTTTTTTTTTTTTTTT",
     ],
-    exits: [{ x: 7, y: 0, to: "ferrara", tx: 7, ty: 14 }, { x: 15, y: 8, to: "osteria", tx: 1, ty: 8 }],
+    exits: [{ x: 7, y: 0, to: "maggiore", tx: 7, ty: 14 }, { x: 15, y: 8, to: "osteria", tx: 1, ty: 8 }],
     heal: { x: 2, y: 13 },
-    wild: [["mortazzone", 3, 5, 3], ["umarellino", 3, 5, 3], ["squacquerone", 3, 5, 3], ["portichino", 6, 6, 1]],
+    wild: [["mortazzone", 3, 5, 3], ["umarellino", 3, 5, 3], ["squacquerone", 3, 5, 3], ["portichino", 6, 6, 1], ["crescentino", 3, 5, 2], ["canalino", 5, 5, 1]],
     signs: { "4,9": "BOLOGNA: la Dotta, la Grassa, la Rossa. E da qualche anno anche la Cara (vedi affitti)." },
     npcs: [
       { id: "bo_balanzone", x: 4, y: 7, name: "Dottor Balanzone", look: L("#1a1a1a", "#1a1a1a"), kind: "talk", lines: ["Ah, il mio apprendista! Ricorda: l'Università di Bologna è la più antica del mondo occidentale. Te l'ho già detto? Te lo ridico.", "Cinque Capi comandano queste terre: Bologna, Osteria Grande, Castel San Pietro, Imola e Ferrara. Battili tutti e sarai Campione dell'Emilia!", "O almeno avrai qualcosa da raccontare al bar per i prossimi trent'anni."] },
@@ -145,27 +173,27 @@ export const MAPS: Record<string, GameMap> = {
     ],
   },
   ferrara: {
-    id: "ferrara", name: "Ferrara",
+    id: "ferrara", name: "Ferrara", music: "ferrara",
     tiles: [
       "TTTTTTTTTTTTTTTT", "TGGGG,,,,,,GGGGT", "TGGGG,WWWW,GGGGT", "T,,,,WWBBWW,,,,T",
       "T,RRR,WBBBW,RRRT", "T,HDH,WWWW,,HDHT", "T,,,,,,..,,,,,,T", "TCCCCCCCCCCCCCCT",
       "T,,,,,,..,,,,,,T", "TGGG,S,..,,,GGGT", "TGGG,,,..,,,GGGT", "TGGGGG,..,GGGGGT",
       "TFF,,,,..,,,,FFT", "T,,,,,,..,,,,,,T", "T,,,,,,..,,,,,,T", "TTTTTTT.TTTTTTTT",
     ],
-    exits: [{ x: 7, y: 15, to: "bologna", tx: 7, ty: 1 }],
+    exits: [{ x: 7, y: 15, to: "altedo", tx: 7, ty: 1 }],
     heal: { x: 3, y: 7 },
-    wild: [["zanzarone", 14, 16, 3], ["nebbiolone", 14, 16, 3], ["salamone", 14, 16, 2], ["biciclone", 14, 16, 2]],
+    wild: [["zanzarone", 14, 16, 3], ["nebbiolone", 14, 16, 3], ["salamone", 14, 16, 2], ["biciclone", 14, 16, 2], ["cappellaccio", 14, 16, 2], ["canalino", 14, 16, 1]],
     signs: { "5,9": "FERRARA: città delle biciclette. Pedoni, siete stati avvisati. Automobilisti, pure." },
     npcs: [
       { id: "fe_oste", x: 3, y: 6, name: "Oste della Salama", look: L("#ffffff", "#e0913a"), kind: "heal", lines: ["Salama da sugo col purè: sei ore di cottura. E tu arrivi di corsa? Siediti e mastica piano, bolognese.", "Ecco, tutti rimessi in sesto. Il cappellaccio di zucca te lo offro io."] },
       { id: "fe_fornaio", x: 13, y: 6, name: "Fornaio della Coppia", look: L("#ffffff", "#f3e3b5"), kind: "shop", lines: ["Pane a coppia appena sfornato! Ah, vuoi solo vasetti? Che tristezza, voi giovani."] },
       { id: "fe_ciclista", x: 5, y: 7, name: "Ciclista Furibonda", look: L("#c0392b", "#fbc02d"), kind: "trainer", lines: ["DLIN DLIN! Togliti dalla ciclabile! Ah, sei sulla strada? Togliti lo stesso!"], team: [["biciclone", 15], ["zanzarone", 15]], reward: 200, after: ["Ho forato. Per colpa tua. Ora devo andare a piedi come una bolognese qualunque."] },
       { id: "fe_pescatore", x: 10, y: 10, name: "Pescatore del Po", look: L("#2e7d32", "#8d6e63"), kind: "trainer", lines: ["Qui c'è nebbia e zanzare. Le zanzare le senti, la nebbia la respiri. Il pesce? Mai visto."], team: [["nebbiolone", 15], ["salamone", 16]], reward: 200, after: ["Oggi non si pesca niente. Nemmeno una vittoria."] },
-      { id: "fe_contessa", x: 8, y: 6, name: "Contessa Nebbia d'Este", look: L("#fbc02d", "#7b1f3a"), kind: "boss", badge: "Sigillo Estense", lines: ["Chi è questo forestiero che puzza di mortadella? Noi qui avevamo una corte rinascimentale quando voi stavate ancora sotto i portici a lamentarvi.", "La nebbia è la mia corte. Inchinati, o perdi!"], team: [["nebbiolone", 19], ["zanzarone", 19], ["salamone", 21]], reward: 800, after: ["Uff... Hai vinto. Prendi il Sigillo Estense.", "Ma non dirlo in giro a Bologna, che poi si montano la testa."] },
+      { id: "fe_contessa", x: 8, y: 6, name: "Contessa Nebbia d'Este", look: L("#fbc02d", "#7b1f3a"), kind: "boss", badge: "Sigillo Estense", lines: ["Chi è questo forestiero che puzza di mortadella? Noi qui avevamo una corte rinascimentale quando voi stavate ancora sotto i portici a lamentarvi.", "La nebbia è la mia corte. Inchinati, o perdi!"], team: [["nebbiolone", 19], ["zanzarazza", 22], ["salamone", 21]], reward: 800, after: ["Uff... Hai vinto. Prendi il Sigillo Estense.", "Ma non dirlo in giro a Bologna, che poi si montano la testa."] },
     ],
   },
   osteria: {
-    id: "osteria", name: "Osteria Grande",
+    id: "osteria", name: "Osteria Grande", music: "osteria",
     tiles: [
       "TTTTTTTTTTTTTTTT", "TGGGGGGT,,GGGGGT", "TGGGGGGT,,GGGGGT", "T,,,,,,,,,,,,,,T",
       "T,RRRRR,,,RRRR,T", "T,HHDHH,,,HHDH,T", "T,,,,,,,,,,,,,,T", "TAAAAAAAAAAAAAAT",
@@ -174,18 +202,18 @@ export const MAPS: Record<string, GameMap> = {
     ],
     exits: [{ x: 0, y: 8, to: "bologna", tx: 14, ty: 8 }, { x: 15, y: 8, to: "csp", tx: 1, ty: 8 }],
     heal: { x: 4, y: 7 },
-    wild: [["mortazzone", 5, 7, 2], ["passatellone", 5, 7, 3], ["cinghialotto", 5, 7, 3], ["piadinone", 6, 6, 1]],
+    wild: [["mortazzone", 5, 7, 2], ["passatellone", 5, 7, 3], ["cinghialotto", 5, 7, 3], ["piadinone", 6, 6, 1], ["crescentino", 5, 7, 2], ["zuppone", 6, 7, 2]],
     signs: { "8,12": "OSTERIA GRANDE: dove la Via Emilia rallenta solo per la crescentina." },
     npcs: [
       { id: "og_oste", x: 4, y: 6, name: "Oste Bruno", look: L("#ffffff", "#ffffff"), kind: "heal", lines: ["Benvenuto all'osteria! Il menu non c'è: mangi quello che dico io. Oggi crescentine. Domani pure.", "Ecco fatto, squadra sazia. Il conto? Te lo segno, tanto torni."] },
       { id: "og_sagra", x: 8, y: 3, name: "Fanatico della Sagra", look: L("#fbc02d", "#c0392b"), kind: "trainer", lines: ["Sagra della salsiccia, sagra del tortellone, sagra della sagra! Non me ne perdo una dal '78!"], team: [["mortazzone", 7], ["passatellone", 7]], reward: 90, after: ["Vado a consolarmi alla sagra della polenta. Ce n'è una stasera, sicuro."] },
       { id: "og_cacciatore", x: 6, y: 10, name: "Cacciatore Domenicale", look: L("#2e7d32", "#4e2e18"), kind: "trainer", lines: ["Ssst! Aspetto il cinghiale da sei ore. Tu mi hai fatto scappare tutto!"], team: [["cinghialotto", 8]], reward: 80, after: ["Va beh, stasera tagliatelle senza ragù di cinghiale. Colpa tua."] },
-      { id: "og_tonello", x: 3, y: 3, name: "Tonello", look: L("#7b4a2a", "#fbc02d"), kind: "trainer", lines: ["Sono Tonello, campione di briscola del bar di Osteria Grande dal 1983! Al bar mi temono tutti, anche il barista.", "Tu hai la faccia di uno che ha appena finito di perdere a carte. Vediamo se coi mostri vai meglio!"], team: [["mortazzone", 8], ["cinghialotto", 8], ["passatellone", 9]], reward: 120, after: ["Mi hai battuto come un due di picche. Torno al bar a dire che ho vinto io, tanto nessuno controlla."] },
-      { id: "og_loris", x: 12, y: 6, name: "Camionista Loris", look: L("#c0392b", "#616161"), kind: "boss", badge: "Sigillo della Via Emilia", lines: ["Faccio la Via Emilia da Piacenza a Rimini da trent'anni. Conosco ogni buca e ogni autogrill per nome.", "Vediamo se reggi il ritmo di uno che pranza alle 11 e cena alle 18!"], team: [["passatellone", 10], ["cinghialotto", 11]], reward: 300, after: ["Mi hai sorpassato a destra, ma per stavolta chiudo un occhio. Ecco il Sigillo della Via Emilia."] },
+      { id: "og_tonello", x: 3, y: 3, name: "Tonello", look: L("#7b4a2a", "#fbc02d"), kind: "trainer", lines: ["Sono Tonello, campione di briscola del bar di Osteria Grande dal 1983! Al bar mi temono tutti, anche il barista.", "Tu hai la faccia di uno che ha appena finito di perdere a carte. Vediamo se coi mostrelli vai meglio!"], team: [["mortazzone", 8], ["cinghialotto", 8], ["passatellone", 9]], reward: 120, after: ["Mi hai battuto come un due di picche. Torno al bar a dire che ho vinto io, tanto nessuno controlla."] },
+      { id: "og_loris", x: 12, y: 6, name: "Camionista Loris", look: L("#c0392b", "#616161"), kind: "boss", badge: "Sigillo della Via Emilia", lines: ["Faccio la Via Emilia da Piacenza a Rimini da trent'anni. Conosco ogni buca e ogni autogrill per nome.", "Vediamo se reggi il ritmo di uno che pranza alle 11 e cena alle 18!"], team: [["passatellone", 10], ["cinghialotto", 11], ["crescentone", 12]], reward: 300, after: ["Mi hai sorpassato a destra, ma per stavolta chiudo un occhio. Ecco il Sigillo della Via Emilia."] },
     ],
   },
   csp: {
-    id: "csp", name: "Castel San Pietro",
+    id: "csp", name: "Castel San Pietro", music: "terme",
     tiles: [
       "TTTTTTTTTTTTTTTT", "T,,,,TBBBT,,,,,T", "T,RR,TBBBT,RRR,T", "T,HD,,,.,,,HDH,T",
       "T,,,,,,.,,,,,,,T", "TWWWWW,.,GGGGGGT", "TWWWWW,.,GGGGGGT", "TWWWWW,.,GGGGGGT",
@@ -194,7 +222,7 @@ export const MAPS: Record<string, GameMap> = {
     ],
     exits: [{ x: 0, y: 8, to: "osteria", tx: 14, ty: 8 }, { x: 15, y: 8, to: "imola", tx: 1, ty: 8 }],
     heal: { x: 4, y: 4 },
-    wild: [["vaporella", 8, 10, 3], ["piadinone", 8, 10, 3], ["cinghialotto", 8, 10, 2], ["passatellone", 9, 9, 2]],
+    wild: [["vaporella", 8, 10, 3], ["piadinone", 8, 10, 3], ["cinghialotto", 8, 10, 2], ["passatellone", 9, 9, 2], ["lambruschino", 8, 10, 2], ["zuppone", 8, 10, 2]],
     signs: { "13,12": "CASTEL SAN PIETRO TERME: rilassati. È un ordine del Sindaco." },
     npcs: [
       { id: "cs_terme", x: 3, y: 4, name: "Signora delle Terme", look: L("#ffffff", "#cfd8dc"), kind: "heal", lines: ["Un bel bagno nei fanghi e torni come nuovo! L'ha detto anche mio cugino, che è quasi medico.", "Visto? Pelle di pesca. Tutti in forma."] },
@@ -205,7 +233,7 @@ export const MAPS: Record<string, GameMap> = {
     ],
   },
   imola: {
-    id: "imola", name: "Imola",
+    id: "imola", name: "Imola", music: "imola",
     tiles: [
       "TTTTTTTTTTTTTTTT", "TAAAAAAAAAAAAAAT", "TA,,,,,,,,,,,,AT", "TA,GGGG,,GGGG,AT",
       "TA,GGGG,,GGGG,AT", "TA,,,,,,,,,,,,AT", "TAAAAAAA.AAAAAAT", "T,,,,,,,.,,,,,,T",
@@ -214,17 +242,45 @@ export const MAPS: Record<string, GameMap> = {
     ],
     exits: [{ x: 0, y: 8, to: "csp", tx: 14, ty: 8 }, { x: 15, y: 8, to: "riviera", tx: 1, ty: 8 }],
     heal: { x: 4, y: 11 },
-    wild: [["pistonzo", 11, 13, 3], ["cinghialotto", 11, 13, 2], ["vaporella", 12, 12, 1], ["biciclone", 12, 13, 1]],
+    wild: [["pistonzo", 11, 13, 3], ["cinghialotto", 11, 13, 2], ["vaporella", 12, 12, 1], ["biciclone", 12, 13, 1], ["lambruschino", 11, 13, 2], ["scooterone", 12, 13, 1]],
     signs: { "13,10": "IMOLA: qui si va forte. Anche al bar, anche a tavola." },
     npcs: [
-      { id: "im_barista", x: 3, y: 11, name: "Barista dell'Autodromo", look: L("#c0392b", "#ffffff"), kind: "heal", lines: ["Caffè ristretto, gomme nuove e via! Al mio bar il pit-stop lo facciamo anche ai mostri.", "Fatto! Tutti al cento per cento. Il caffè però lo paghi."] },
+      { id: "im_barista", x: 3, y: 11, name: "Barista dell'Autodromo", look: L("#c0392b", "#ffffff"), kind: "heal", lines: ["Caffè ristretto, gomme nuove e via! Al mio bar il pit-stop lo facciamo anche ai mostrelli.", "Fatto! Tutti al cento per cento. Il caffè però lo paghi."] },
       { id: "im_tifoso", x: 8, y: 5, name: "Tifoso in Tuta Rossa", look: L("#c0392b", "#c0392b"), kind: "trainer", lines: ["Vengo qui ogni weekend dal 1987. Mia moglie è convinta che lavoro la domenica."], team: [["pistonzo", 13], ["cinghialotto", 13]], reward: 160, after: ["Nooo! Va beh, la stagione prossima è quella buona. Lo dico da 37 anni."] },
-      { id: "im_contadina", x: 5, y: 7, name: "Contadina dei Colli", look: L("#fbc02d", "#388e3c"), kind: "trainer", lines: ["Le mie albicocche sono le migliori del mondo. Chi dice il contrario se la vede coi miei mostri!"], team: [["cinghialotto", 12], ["piadinone", 13]], reward: 140, after: ["Brava gioventù. Ti darei un'albicocca, ma quest'anno le ha mangiate tutte il cinghiale."] },
-      { id: "im_ivano", x: 11, y: 10, name: "Ivano detto Pistone", look: L("#fbc02d", "#c0392b"), kind: "boss", badge: "Sigillo del Rombo", lines: ["Avrei potuto essere un pilota. Davvero. Ho solo sbagliato... tutto il resto.", "Ma in lotta sono il più veloce della Romagna! ...Come, Imola è ancora un po' Emilia? Non importa. VRRRUUUM!"], team: [["pistonzo", 16], ["biciclone", 17]], reward: 500, after: ["Giù dal podio un'altra volta. Prendi il Sigillo del Rombo.", "Io torno a guardare le gare dal prato, con la mia sedia pieghevole."] },
+      { id: "im_contadina", x: 5, y: 7, name: "Contadina dei Colli", look: L("#fbc02d", "#388e3c"), kind: "trainer", lines: ["Le mie albicocche sono le migliori del mondo. Chi dice il contrario se la vede coi miei mostrelli!"], team: [["cinghialotto", 12], ["piadinone", 13]], reward: 140, after: ["Brava gioventù. Ti darei un'albicocca, ma quest'anno le ha mangiate tutte il cinghiale."] },
+      { id: "im_ivano", x: 11, y: 10, name: "Ivano detto Pistone", look: L("#fbc02d", "#c0392b"), kind: "boss", badge: "Sigillo del Rombo", lines: ["Avrei potuto essere un pilota. Davvero. Ho solo sbagliato... tutto il resto.", "Ma in lotta sono il più veloce della Romagna! ...Come, Imola è ancora un po' Emilia? Non importa. VRRRUUUM!"], team: [["turbonzo", 18], ["biciclone", 17]], reward: 500, after: ["Giù dal podio un'altra volta. Prendi il Sigillo del Rombo.", "Io torno a guardare le gare dal prato, con la mia sedia pieghevole."] },
+    ],
+  },
+  maggiore: {
+    id: "maggiore", name: "Castel Maggiore", music: "maggiore",
+    tiles: ['TTTTTTT.TTTTTTTT', 'TGGGG,,.,,GGGGGT', 'TGGGG,,.,,GGGGGT', 'T,RRR,,.,,RRRR,T', 'T,HDH,,.,,HHDH,T', 'T,,,,,,.,,,,,,,T', 'T,,,,,,.,,,,,,,T', 'TCCCCCCCCCCCCCCT', 'T,,,,,,.,,,S,,,T', 'TGGGGG,.,GGGGGGT', 'TGGGGG,.,GGGGGGT', 'T,,,,,,.,,,,,,,T', 'TWWWW,,.,,FFFFFT', 'TWWWW,,.,,FFFFFT', 'T,,,,,,.,,,,,,,T', 'TTTTTTT.TTTTTTTT'],
+    exits: [{ x: 7, y: 15, to: "bologna", tx: 7, ty: 1 }, { x: 7, y: 0, to: "altedo", tx: 7, ty: 14 }],
+    heal: { x: 4, y: 5 },
+    wild: [["canalino", 9, 12, 2], ["crescentino", 9, 12, 2], ["zuppone", 9, 12, 2], ["umarellino", 10, 12, 2]],
+    signs: { "11,8": "CASTEL MAGGIORE: a due passi da Bologna, ma guai a dire che è periferia." },
+    npcs: [
+      { id: "cm_barista", x: 3, y: 5, name: "Barista della Piazza", look: L("#ffffff", "#1a1a1a"), kind: "heal", lines: ["Un caffè, un toast e due chiacchiere sul Bologna. Ecco fatto, squadra come nuova!"] },
+      { id: "cm_ferramenta", x: 12, y: 5, name: "Ferramenta Eugenio", look: L("#7b4a2a", "#9e9e9e"), kind: "shop", lines: ["Viti, bulloni, vasetti e brodini. Da Eugenio c'è tutto, basta saperlo cercare."] },
+      { id: "cm_pendolare", x: 5, y: 8, name: "Pendolare delle 7:12", look: L("#424242", "#1565c0"), kind: "trainer", lines: ["Il mio treno per Bologna ha 40 minuti di ritardo. Ho tutto il tempo per batterti!"], team: [["canalino", 10], ["umarellino", 11]], reward: 140, after: ["Ecco, è arrivato il treno. Anzi no, è soppresso. Che giornata."] },
+      { id: "cm_mamma", x: 10, y: 11, name: "Mamma del Gruppo WhatsApp", look: L("#e91e63", "#f4a6b0"), kind: "trainer", lines: ["Ho 47 notifiche non lette sul gruppo della scuola e una lotta da vincere. Facciamo in fretta!"], team: [["zuppone", 11], ["crescentino", 11]], reward: 150, after: ["Ho perso, ma lo scrivo sul gruppo come se avessi vinto io."] },
+    ],
+  },
+  altedo: {
+    id: "altedo", name: "Altedo", music: "altedo",
+    tiles: ['TTTTTTT.TTTTTTTT', 'TGGGG,,.,,GGGGGT', 'TGGGG,,.,,GGGGGT', 'T,RRR,,.,,RRRR,T', 'T,HDH,,.,,HHDH,T', 'T,,,,,,.,,,,,,,T', 'T,,,,,,.,,,,,,,T', 'TCCCCCCCCCCCCCCT', 'T,,,,,,.,,,S,,,T', 'TGGGGG,.,GGGGGGT', 'TGGGGG,.,GGGGGGT', 'T,,,,,,.,,,,,,,T', 'TGGGG,,.,,GGGGGT', 'TGGGG,,.,,GGGGGT', 'T,,,,,,.,,,,,,,T', 'TTTTTTT.TTTTTTTT'],
+    exits: [{ x: 7, y: 15, to: "maggiore", tx: 7, ty: 1 }, { x: 7, y: 0, to: "ferrara", tx: 7, ty: 14 }],
+    heal: { x: 4, y: 5 },
+    wild: [["cappellaccio", 11, 14, 3], ["cinghialotto", 11, 14, 2], ["zanzarone", 12, 14, 2], ["lambruschino", 11, 13, 2]],
+    signs: { "11,8": "ALTEDO: capitale dell'asparago verde. Qui l'asparago è una religione." },
+    npcs: [
+      { id: "al_nonna", x: 3, y: 5, name: "Nonna dell'Asparago", look: L("#cfd8dc", "#4caf50"), kind: "heal", lines: ["Risotto agli asparagi per tutti! Fa bene, purifica, e ti fa fare la pipì profumata. Lo dice la scienza."] },
+      { id: "al_banco", x: 12, y: 5, name: "Banco della Sagra", look: L("#fbc02d", "#2e7d32"), kind: "shop", lines: ["Prezzi da sagra! Vasetti, brodini e un mazzo di asparagi in omaggio. Gli asparagi no, quelli sono finiti."] },
+      { id: "al_coltivatore", x: 5, y: 8, name: "Coltivatore di Asparagi", look: L("#2e7d32", "#8d6e63"), kind: "trainer", lines: ["Asparago verde, mica bianco come quelli del nord! Ti insegno io il rispetto per l'ortaggio!"], team: [["cappellaccio", 12], ["cinghialotto", 13]], reward: 170, after: ["Va bene, hai vinto. Ma l'asparago resta il re della tavola."] },
+      { id: "al_ciclista", x: 10, y: 11, name: "Ciclista in Lycra della Domenica", look: L("#ffeb3b", "#00acc1"), kind: "trainer", lines: ["Bici da 8000 euro, maglia aderente, 40 km di pianura. Mi sento al Giro d'Italia!"], team: [["biciclone", 13], ["zanzarone", 13]], reward: 180, after: ["Ho perso perché la bici pesa 50 grammi di troppo. Sicuro."] },
     ],
   },
   riviera: {
-    id: "riviera", name: "Riviera Romagnola",
+    id: "riviera", name: "Riviera Romagnola", music: "beach",
     tiles: [
       "TTTTTTTTTTTTTTTT", "TQQQQ,,,,,RRRR,T", "TQQQQ,,,,,HHDH,T", "T,,,,,,..,,,,,,T",
       "TRRR,,,..,,QQQQT", "THDH,,,..,,QQQQT", "T,,,,,,..,,,,,,T", "TYYYYYYYYYYYYYYT",
@@ -233,7 +289,7 @@ export const MAPS: Record<string, GameMap> = {
     ],
     exits: [{ x: 0, y: 8, to: "imola", tx: 14, ty: 8 }],
     heal: { x: 2, y: 7 },
-    wild: [["gabbianone", 18, 21, 3], ["vongolino", 18, 21, 2], ["medusella", 18, 21, 2], ["discotecco", 19, 22, 2], ["ombrellone", 19, 22, 2]],
+    wild: [["gabbianone", 18, 21, 3], ["vongolino", 18, 21, 2], ["medusella", 18, 21, 2], ["discotecco", 19, 22, 2], ["ombrellone", 19, 22, 2], ["scooterone", 18, 21, 2]],
     signs: {},
     npcs: [
       { id: "ri_piadinara", x: 2, y: 6, name: "Piadinara Loretta", look: L("#ffffff", "#e0913a"), kind: "heal", lines: ["Piadina con squacquerone e rucola, e ti passa tutto! Il prosciutto? Lo paghi a parte, tesoro.", "Ecco, squadra rimessa a nuovo. Ricordati: qui la piadina si fa SOTTILE. Chi dice il contrario è di Rimini nord o di Rimini sud, non ricordo."] },
@@ -241,7 +297,7 @@ export const MAPS: Record<string, GameMap> = {
       { id: "ri_turista", x: 5, y: 9, name: "Turista in Sandali e Calzini", look: L("#fbc02d", "#4caf50"), kind: "trainer", lines: ["Ja! Vengo qui da 30 estati. Conosco ogni bagnino per nome, e ho sempre l'asciugamano sul lettino alle 6 di mattina!"], team: [["vongolino", 19], ["gabbianone", 20]], reward: 250, after: ["Nein! Domani mi alzo alle 5, così il lettino migliore è mio."] },
       { id: "ri_vitellone", x: 10, y: 11, name: "Vitellone da Spiaggia", look: L("#1a1a1a", "#c0392b"), kind: "trainer", lines: ["Abbronzatura da 12 ore, camicia aperta, collanina d'oro. Ho conquistato tutta la spiaggia. Tranne mia madre, che mi chiama per il pranzo."], team: [["discotecco", 20], ["medusella", 20]], reward: 260, after: ["Ok, hai vinto. Ma stasera in discoteca il re sono io. Fino alle 23, poi devo rientrare."] },
       { id: "ri_nonna", x: 13, y: 7, name: "Nonna con la Borsa Frigo", look: L("#cfd8dc", "#4caf50"), kind: "trainer", lines: ["In questa borsa frigo ho lasagne, cotolette, anguria e un pollo intero. Al bar? Mai! Prima però si lotta."], team: [["ombrellone", 20], ["vongolino", 21]], reward: 240, after: ["Brava, ti sei meritato una cotoletta. Fredda, ma buonissima."] },
-      { id: "ri_romeo", x: 8, y: 12, name: "Romeo, Re dei Lettini", look: L("#c0392b", "#fbc02d"), kind: "boss", badge: "Sigillo dell'Ombrellone", lines: ["Benvenuto al Bagno Mariolino 33! Prima fila 80 euro, seconda fila 75, la sabbia è gratis ma te la faccio pagare uguale.", "Quarant'anni di stagioni, migliaia di turisti, un solo amore: l'incasso di Ferragosto. Vediamo se mi rovini la stagione!"], team: [["gabbianone", 22], ["medusella", 22], ["discotecco", 24]], reward: 1000, after: ["Mi hai battuto in pieno agosto, che disonore! Prendi il Sigillo dell'Ombrellone.", "E l'ombrellone stasera te lo regalo. Il lettino no, eh."] },
+      { id: "ri_romeo", x: 8, y: 12, name: "Romeo, Re dei Lettini", look: L("#c0392b", "#fbc02d"), kind: "boss", badge: "Sigillo dell'Ombrellone", lines: ["Benvenuto al Bagno Mariolino 33! Prima fila 80 euro, seconda fila 75, la sabbia è gratis ma te la faccio pagare uguale.", "Quarant'anni di stagioni, migliaia di turisti, un solo amore: l'incasso di Ferragosto. Vediamo se mi rovini la stagione!"], team: [["gabbianazzo", 26], ["medusella", 22], ["discotecco", 24]], reward: 1000, after: ["Mi hai battuto in pieno agosto, che disonore! Prendi il Sigillo dell'Ombrellone.", "E l'ombrellone stasera te lo regalo. Il lettino no, eh."] },
     ],
   },
 };
@@ -250,6 +306,6 @@ export const ALL_BADGES = ["Sigillo del Cantiere", "Sigillo della Via Emilia", "
 
 export const INTRO_LINES = [
   "Benvenuto! Io sono il Dottor Balanzone, luminare dell'Università più antica del mondo. Sì, lo ripeto spesso.",
-  "Queste terre, tra Bologna, Osteria Grande, Castel San Pietro, Imola e Ferrara, sono piene di MONSTRI: creature strane, golose e chiacchierone.",
+  "Queste terre, tra Bologna, Osteria Grande, Castel San Pietro, Imola e Ferrara, sono piene di MOSTRELLI: creature strane, golose e chiacchierone.",
   "Prima di partire, però, dimmi come ti chiami.",
 ];

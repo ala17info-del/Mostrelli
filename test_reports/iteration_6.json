@@ -1,0 +1,45 @@
+{
+  "summary": "Iteration 6 (MOSTRELLI). Backend: 52/52 pytest pass (new test_iter6_duel_evo.py + updated iter5 duel test). /api/duel accepts all 12 evolved species ids, rejects unknown species / lv>50 / lv 0 / string lv / empty / >6 party with 422, sanitises hp/xp, and counts a repeated sequential result report only once. One race condition: parallel result reports from the same user are double-counted (10 parallel reports gave losses=2). Frontend at 390x844 and 375x812: title says MOSTRELLI and the battle command reads 'MOSTRELLI'. Map chain works both ways: Bologna (7,0) -> Castel Maggiore (7,14), Maggiore north -> Altedo, Altedo north -> Ferrara, Ferrara south -> Altedo, Altedo south -> Maggiore. Markers marker-heal-al_nonna, marker-shop-al_banco, marker-trainer-al_coltivatore and marker-trainer-al_ciclista are present. Maggiore barista heals the party (persisted). Maggiore ferramenta shop buy works (money -8, vasetto +1, persisted). Sign at (11,8) shows its text. Trainers al_coltivatore and cm_mamma: battle, win, reward of 2x the reward field, marked defeated. A wild encounter in Altedo grass works. The world map lists the 8 towns in the correct order. Evolutions: Mortazzone lv19 -> lv20 -> Mortadellone (trainer battle), Squacquerone -> Squacquerona at lv18 (wild battle), both with the flash animation and saved. Evolved sprites render in battle, team and Mostrario (all 12 palette skins). Mostrario shows 44 entries numbered #001-#044. Music: per-map BGM verified by patching HTMLMediaElement.play (altedo.wav -> maggiore.wav -> altedo.wav, old track paused, loop=true, no console errors). Controls fit at 375x812 (A button right edge 365px, hint right edge 361px). Team screen shows '2 digestivi · 3 gelati' with the 'solo in lotta' note. Digestivo in battle on a mon that is not confused says 'non è confuso' and is not consumed. Duel UI: create code with evolved party OK; accept another user's code -> battle -> win -> server losses=1. Save toast works. No deprecated Expo packages (expo-audio ~58 used).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/duel/{code}/result", "issue": "Race condition: find_one + check reported_by + update_one is not atomic. 10 parallel reports from the same user incremented losses by 2. Fix: update_one({'_id': d['_id'], 'reported_by': {'$ne': uid}}, {...}) and use modified_count to decide 'counted'."},
+      {"endpoint": "POST /api/duel", "issue": "isinstance(lv, int) also accepts JSON true/false (bool is a subclass of int), so lv=true is stored as level 1. Add `and not isinstance(lv, bool)`."},
+      {"endpoint": "PUT /api/save", "issue": "Server does not validate the save. A crafted save with hp above max shows e.g. '90/75 PV' in the team screen. The client also does not clamp hp on load. Low priority."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Battle evolution sequence", "issue": "gainXp() mutates m.s before the messages are snapshotted, so the player info panel and sprite already show the evolved form (e.g. 'Mortadellone Lv20') during the '... guadagna XP', 'sale al livello' and 'Cosa? Mortazzone si sta evolvendo!' messages. This spoils the reveal. The old species should stay visible until the 'è diventato' message. Reference: /app/frontend/src/game/engine.ts:67-75, Battle.tsx:257", "testID": "battle-player-info", "priority": "medium"},
+      {"component": "Duel battle XP message", "issue": "In friend duels the battle shows 'Crescentone guadagna 45 punti esperienza!' (and could show level-up or evolution messages), but the XP is discarded afterwards (save xp unchanged). Either skip the XP step for duels or keep the XP.", "testID": "battle-message-box", "priority": "low"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Title", "issues": ["The subtitle still lists 'Bologna, Osteria Grande, Castel San Pietro, Imola e Ferrara' and does not mention the new towns Castel Maggiore and Altedo (app/index.tsx:33)."]},
+      {"screen": "Mostrario / sprites", "issues": ["Zanzarazza (#37474f body) and Lambruscone (#4a0e2e) have low contrast on the dark card and battle backgrounds.", "Squacquerona looks almost the same as Squacquerone. Evolved forms are palette swaps at the same size; consider rendering evolved forms bigger or adding a distinguishing detail.", "Evolved forms are numbered #033-#044 instead of sitting next to their base forms. Acceptable, but unusual for a 'dex'."]},
+      {"screen": "Game balance", "issues": ["No wild or trainer team uses any evolved species, including the Riviera (lv18-22) and the bosses, so evolved forms appear only through your own evolution."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_iter6_duel_evo.py", "/app/backend/tests/test_duel_apple_iter5.py", "/app/test_reports/pytest/pytest_iter6.xml"],
+  "action_items": [
+    "Make POST /api/duel/{code}/result atomic (filter on reported_by $ne uid in update_one) to prevent double counting under concurrent requests.",
+    "Reject bool lv in duel party validation.",
+    "Defer the species change in the evolution message sequence so the UI shows the old form until the 'è diventato' message.",
+    "Hide or skip the XP gain messages in friend duels, or actually apply the XP.",
+    "Update the title subtitle to include Castel Maggiore and Altedo.",
+    "Optional: compress the BGM .wav files (3.2 MB total, e.g. ferrara.wav is 529 KB) to .m4a/.mp3/.ogg to reduce bundle size and load time.",
+    "Optional: improve contrast of the Zanzarazza and Lambruscone palettes."
+  ],
+  "critical_code_review_comments": [
+    "audio.ts creates a new AudioPlayer per map change and removes the previous one. Verified on web: the previous track is paused. stopBgm is never called, so the BGM keeps playing on the title screen after 'Schermata iniziale' (probably intended).",
+    "Evolution only triggers inside gainXp. A mon already above its evolution level in an older save evolves on its next XP gain (acceptable).",
+    "server.py SPECIES_IDS duplicates the frontend species list. Keep it in sync when adding species (consider a shared JSON)."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter6_duel_evo.py (new)", "/app/backend/tests/test_duel_apple_iter5.py (updated to the iter6 sanitised party schema and the one-report-per-user rule)"],
+  "success_rate": {"backend": "100% (52/52); 1 race condition found in an extra concurrency probe", "frontend": "~95% (all requested flows pass; minor UX issues)"},
+  "seed_data_creation": "TEST users test_it6_ui@example.com, test_it6_*@example.com and test_it6_b*/test_it6_r* (password secret123) with crafted saves (test_it6_ui: Maggiore, party crescentone/squacquerona/mortadellone, all 44 species 'seen'). TEST_ duels were created (TEST_Evo, TEST_Bad, TEST_Ana, TEST_Rivale WZU6XG, TEST_Race, UI-created code 6GRJKP). There is no delete endpoint for duels or users, so they were left in place. No seed or real data was modified.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Log in via title-login-btn -> auth-email-input/auth-password-input -> auth-submit-btn -> title-continue-btn. D-pad: hover dpad-{dir}, mouse down, 150ms, mouse up. Use /app/backend/tests/save_tool.py <email> '<json patch>' to teleport (needs EXPO_PUBLIC_BACKEND_URL exported from frontend/.env). Maggiore/Altedo layout: healer (3,5), stand at (4,5) facing left; shop (12,5), stand at (12,6) facing up; sign (11,8), stand at (12,8) facing left; trainers (5,8) and (10,11); grass rows 9-10. To verify BGM on web, add an init script that patches HTMLMediaElement.prototype.play, then page.reload()."
+}

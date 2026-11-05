@@ -26,6 +26,24 @@ Map adventure with turn-based battles · modern colourful pixel art · strong sa
 - New Riviera Romagnola map: 5 monsters, 3 trainers, a healer, a shop and boss Romeo, who gives the 6th Sigillo.
 - Shaded sprites and detailed, animated tiles.
 
+## Iteration 6 (2026-06)
+- The game is now called "MOSTRELLI", and the creatures are called Mostrelli everywhere in the text.
+- Original chiptune for each place: Bologna (liscio waltz), Osteria Grande (polka), Castel San Pietro (calm, spa-style), Imola (racing rock), Ferrara (Renaissance-style), Castel Maggiore (mazurka), Altedo (country-fair tune), Riviera (beach).
+- 12 new evolutions (17 in total; 44 species). The new forms reuse the base drawing in new colours (SKINS in sprites.ts), with a flashing animation when a monster evolves.
+- New towns Castel Maggiore and Altedo between Bologna and Ferrara (Bologna ↔ Castel Maggiore ↔ Altedo ↔ Ferrara), each with a healer, a shop, 2 trainers and a sign.
+
+- Fixes after testing: the evolution reveal keeps the old form until the "è diventato" message, duels no longer show XP, duel result counting is atomic, `lv: true` is rejected, evolved species now appear in boss teams, and the Zanzarazza, Lambruscone and Squacquerona colours are clearer.
+
+## Iteration 5 (2026-06)
+- World map screen (/mappa): every town with its healer, shop, boss status and how many trainers are left.
+- Sfida tra Amici (/sfida): the backend saves your team under a 6-character code. A friend enters the code and fights that team, played by the computer. Your monsters take no damage and wins/losses are counted.
+- New items Digestivo (cures confusion) and Gelato (cures burns), both usable only in battle.
+- 6 new monsters (32 in total) and 6 new moves.
+- Smoother walking: the camera and the player slide between tiles.
+- Buttons: A is now green, B is now red and switches run mode, and a new centre MENU button opens the menu.
+- Animations when healing (sparkles) and when throwing a jar (it flies, the monster is sucked in, the jar wobbles, or the monster breaks out).
+- Sign in with Apple (iOS only): POST /api/auth/apple, which logs in with the same token as the email/password login.
+
 ## Iteration 4 (2026-06)
 - Move side effects (21 moves): lowering an enemy stat, raising your own stat, confusion (can hit itself) and Scottato (loses HP each turn). The battle info boxes show status chips, and the move buttons show each effect's chance.
 
