@@ -1,0 +1,36 @@
+{
+  "summary": "Iteration 4 (frontend, move side effects). I played 25+ battles in the web preview at 390x844: wild battles in Bologna and Ferrara, plus the Gino boss fight. Confirmed in the UI: move effect hints on move buttons ('30% Confonde', '40% DIF nemica giù', '20% Scotta', '30% Scotta'); confusion applied ('X è confuso da tutte quelle chiacchiere!'), the 'è confuso...' check on later turns, and a confused wild mon hitting itself, fainting and still giving XP; DIF↓ and VEL↓ on both sides with messages and chips; burn ('si scotta! Perderà PV ogni turno.' + SCOT chip + 'si scotta ancora... che bruciore!' damage of about 1/12 max HP after the burned mon acts); faster mons acting first; a stat condition cleared after switching out and back in; manual switch, chained forced switches, losing (whiteout, respawn, money penalty), and the trainer win (flee and catch blocked, 2-mon team, 400 € = 200x2, badge). No page errors or crashes. One medium bug: status chips show conditions too early (details below). Not seen in the UI because they depend on luck (checked by reading the code only): self ATK/DEF/VEL up procs, the ±3 stage cap message, the player hitting itself in confusion, and a burn tick causing a faint. No deprecated Expo packages detected (expo-av, expo-barcode-scanner, expo-background-fetch not present).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Battle status chips", "issue": "Chips show conditions too early. They read the live cond ref, which is updated for the whole turn as soon as doMove/enemyTurn work out the turn. So a chip appears from the turn's first message, before the effect message. It can also show an effect the opponent only applies later in the same turn. Observed: 'Selvatico · Biciclone usa Sgommata! [player VEL↓]' shown before 'La velocità di Tortellotto cala!'; 'Umarellino usa Chiacchierata Infinita! [enemy:CONF|player:CONF]' shown before either confuse message. HP is already saved per step (php/ehp), but conditions are not. Fix: save a copy of the conditions in each Step and draw chips from steps[si] while in phase 'msg'. Reference: /app/frontend/src/game/Battle.tsx:50-69,144", "testID": "battle-enemy-status / battle-player-status", "priority": "MEDIUM"},
+      {"component": "Effect messages", "issue": "Effect lines have no wild/enemy prefix. With mirror matches (e.g. Umarellino vs wild Umarellino), 'Umarellino è confuso da tutte quelle chiacchiere!' does not say which side is affected. Reference: Battle.tsx:179-199", "testID": "battle-message-box", "priority": "LOW"},
+      {"component": "Burn tick visuals", "issue": "The burn tick has no hit effect of its own. During 'X si scotta ancora...' the previous HitFx '-N' number is still shown over the OTHER mon's sprite, which suggests that mon took the burn damage. Reference: Battle.tsx:206-210", "testID": "battle-message-box", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [{"screen": "Battle", "issues": ["Chip text fontSize 9 and fxHint fontSize 9 (muted color) are very small on mobile; consider 10-11."]}],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/setup_iter4_users.py", "/app/backend/tests/save_tool.py"],
+  "action_items": [
+    "HIGH (found by reading the code, not reproduced in the UI): burn makes a same-turn double faint possible. Example: the player's attack KOs the trainer's mon, then the player's own burn tick KOs the player's mon. resolve() handles only the foe-faint branch (sends the next trainer mon, then goes to 'menu'), so the player's 0-HP mon stays active and can keep attacking. Fix: in that branch, if P.current[a].hp<=0, go to forceSwitch, or to lose if no mon is alive, after the trainer's next mon comes in (Battle.tsx:217-232).",
+    "MEDIUM: Save a copy of the conditions (atk/def/spd/conf/burn for both mons) in each battle Step and draw chips from the step being shown, so chips appear together with their effect message (Battle.tsx chips()/snap()).",
+    "LOW: Add the 'Selvatico · '/'Nemico · ' prefix (or similar) to stat, confuse and burn messages that target the opponent's mon.",
+    "LOW: flee() uses base stats(me).spd vs stats(foe).spd; use effSpd() so VEL stages also affect escape (Battle.tsx:297).",
+    "LOW: When the last confused turn ends in a self-hit, conf reaches 0 with no 'si è ripreso dalla confusione!' message; the CONF chip just disappears (Battle.tsx:148-157).",
+    "LOW: Give burn ticks their own small hit effect (or clear the old fxShow) so the damage number is not left over the wrong sprite."
+  ],
+  "critical_code_review_comments": [
+    "hit(): effects only roll when the move did not miss and the target is still alive (who.hp>0); the stage cap of ±3 is enforced with a 'non può cambiare oltre!' message; confuse and burn are not re-applied if already active. Logic looks correct.",
+    "Burn faint handling: doMove skips the enemy turn when the attacker faints from its own burn; resolve() checks the foe first, so a mutual faint counts as a win. That is acceptable, but if both faint, the player gets XP and the trainer sends the next mon while the player's mon is at 0 HP. Next menu: the 0-HP mon stays active (no forceSwitch, because resolve returned after the foe-faint branch). POTENTIAL BUG worth checking: after a mutual faint in a trainer battle, the player may act with a 0-HP mon. Reference: Battle.tsx:217-232.",
+    "Conditions are keyed by mon uid in a ref that lives only for the battle; nothing carries over between battles (confirmed in the UI). Caught mons do not keep conditions (fine).",
+    "Battle.tsx is 537 lines; it is getting close to the 700-line limit, so consider moving the conditions/effects logic (hit/burnTick/chips) into engine.ts or a hook."
+  ],
+  "updated_files": ["/app/backend/tests/setup_iter4_users.py (new test helper only)"],
+  "success_rate": {"backend": "N/A (not requested)", "frontend": "90% - all effect flows tested work; 1 medium display-timing bug, several low issues"},
+  "seed_data_creation": "Created TEST_ users test_it4_a8f405@example.com (TEST_Fx) and test_it4_01f9ae@example.com (TEST_FxB), password secret123, and changed their saves via save_tool.py. Seed and real user data were not touched.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Use mouse down/up with a ~150ms hold on dpad-* (page.click force=True does NOT move the player). Check for battle-screen/encounter-flash before every D-pad tap: during a battle, taps at D-pad coordinates hit the battle panel and advance or flee. Battle switch rows use aria-disabled (is_enabled() is always true). Good grass spots: Bologna (8,12)<->(8,13) for Lv3-5; Ferrara (12,1)<->(12,2) for Lv14-16. Gino: stand at bologna (9,5) facing up, then press btn-a-interact.",
+  "rca_of_issue": "Chip timing: Battle.tsx works out the whole turn up front (doMove -> hit -> cond.current mutated) and then plays the Step messages one by one. Step saves php/ehp but not conditions, while chips() reads cond.current directly, so chips always show the end-of-turn state from the first message."
+}

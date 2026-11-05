@@ -26,6 +26,9 @@ Map adventure with turn-based battles · modern colourful pixel art · strong sa
 - New Riviera Romagnola map: 5 monsters, 3 trainers, a healer, a shop and boss Romeo, who gives the 6th Sigillo.
 - Shaded sprites and detailed, animated tiles.
 
+## Iteration 4 (2026-06)
+- Move side effects (21 moves): lowering an enemy stat, raising your own stat, confusion (can hit itself) and Scottato (loses HP each turn). The battle info boxes show status chips, and the move buttons show each effect's chance.
+
 ## Iteration 3 (2026-06)
 - Lower prices. Trainer rewards doubled, wild wins now pay money, and losing costs 25% of money instead of 50%.
 - CURA and MARKET markers above healers and shops on the map.

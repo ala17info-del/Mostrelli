@@ -7,9 +7,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, FONT } from "@/src/theme";
 
 import { sfx, SfxName } from "./audio";
-import { ITEMS, ItemId, MOVES, SPECIES, TypeId, TYPES } from "./data";
+import { FX_LABEL, ITEMS, ItemId, MOVES, SPECIES, TypeId, TYPES } from "./data";
 import { HitFx } from "./BattleFx";
-import { applyItem, attack, catchChance, gainXp, knownMoves, Mon, monName, stats, xpReward } from "./engine";
+import { applyItem, attack, stageMult, catchChance, gainXp, knownMoves, Mon, monName, stats, xpReward } from "./engine";
 import { PixelSprite } from "./PixelSprite";
 import { hap, HpBar, PixelText } from "./ui";
 
@@ -29,11 +29,14 @@ function sfxFor(text: string): SfxName | null {
   if (/^Preso!/.test(text)) return "catch";
   if (/uscito dal vasetto/.test(text)) return "fail";
   if (/recupera|riprende i sensi/.test(text)) return "heal";
+  if (/cala!|è confuso|si scotta|si colpisce da solo/.test(text)) return "fail";
+  if (/aumenta!/.test(text)) return "levelup";
   return null;
 }
 
 type Fx = { target: "foe" | "me"; type: TypeId; dmg: number; crit: boolean; eff: number };
-type Step = { text: string; php: number; ehp: number; fx?: Fx };
+type CondSnap = Record<string, { atk: number; def: number; spd: number; conf: number; burn: boolean }>;
+type Step = { text: string; php: number; ehp: number; fx?: Fx; conds?: CondSnap };
 type Phase = "msg" | "menu" | "moves" | "switch" | "forceSwitch" | "bag" | "itemTarget";
 
 export function Battle({ setup, party: initialParty, items, onEnd }: { setup: BattleSetup; party: Mon[]; items: Partial<Record<ItemId, number>>; onEnd: (r: BattleResult) => void }) {
@@ -42,6 +45,29 @@ export function Battle({ setup, party: initialParty, items, onEnd }: { setup: Ba
   const E = useRef<Mon[]>(setup.enemies.map((m) => ({ ...m })));
   const seen = useRef<string[]>([setup.enemies[0].s]);
   const used = useRef<Partial<Record<ItemId, number>>>({});
+  type Cond = { atk: number; def: number; spd: number; conf: number; burn: boolean };
+  const cond = useRef<Record<string, Cond>>({});
+  const cnd = (uid: string) => cond.current[uid] ?? (cond.current[uid] = { atk: 0, def: 0, spd: 0, conf: 0, burn: false });
+  const chips = (m: Mon, tid: string, snapC?: CondSnap) => {
+    const c = (snapC ?? cond.current)[m.uid];
+    if (!c) return null;
+    const out: { t: string; bad: boolean }[] = [];
+    if (c.burn) out.push({ t: "SCOT", bad: true });
+    if (c.conf > 0) out.push({ t: "CONF", bad: true });
+    (["atk", "def", "spd"] as const).forEach((k) => {
+      if (c[k] !== 0) out.push({ t: `${k === "atk" ? "ATT" : k === "def" ? "DIF" : "VEL"}${c[k] > 0 ? "↑" : "↓"}${Math.abs(c[k]) > 1 ? Math.abs(c[k]) : ""}`, bad: c[k] < 0 });
+    });
+    if (!out.length) return null;
+    return (
+      <View style={styles.chips} testID={tid}>
+        {out.map((o) => (
+          <View key={o.t} style={[styles.chip, { backgroundColor: o.bad ? colors.brandPrimary : colors.brandTertiary }]}>
+            <PixelText style={styles.chipTxt}>{o.t}</PixelText>
+          </View>
+        ))}
+      </View>
+    );
+  };
   const left = (id: ItemId) => (items[id] ?? 0) - (used.current[id] ?? 0);
   const [pending, setPending] = useState<ItemId | null>(null);
   const shake = useSharedValue(0);
@@ -100,7 +126,10 @@ export function Battle({ setup, party: initialParty, items, onEnd }: { setup: Ba
       flashO.value = withSequence(withTiming(0.55, { duration: 60 }), withTiming(0, { duration: 260 }));
       shake.value = withSequence(withTiming(-14, { duration: 40 }), withTiming(14, { duration: 40 }), withTiming(-8, { duration: 40 }), withTiming(8, { duration: 40 }), withTiming(0, { duration: 40 }));
     }
-    if (!curFx) return;
+    if (!curFx) {
+      setFxShow(null);
+      return;
+    }
     const lungeAtt = curFx.target === "foe" ? meX : foeX;
     const blink = curFx.target === "foe" ? foeO : meO;
     lungeAtt.value = withSequence(withTiming(curFx.target === "foe" ? 28 : -28, { duration: 90 }), withTiming(0, { duration: 180 }));
@@ -116,11 +145,25 @@ export function Battle({ setup, party: initialParty, items, onEnd }: { setup: Ba
   };
 
   // Build steps of one attack while tracking HP snapshots.
-  const snap = (list: Step[], text: string, a = act, e = ei) => list.push({ text, php: P.current[a].hp, ehp: E.current[e].hp });
+  const snap = (list: Step[], text: string, a = act, e = ei) =>
+    list.push({ text, php: P.current[a].hp, ehp: E.current[e].hp, conds: JSON.parse(JSON.stringify(cond.current)) });
 
   const hit = (list: Step[], att: Mon, def: Mon, mv: string, target: "foe" | "me", a: number, prefix = "") => {
+    const ca = cnd(att.uid), cd = cnd(def.uid);
+    if (ca.conf > 0) {
+      ca.conf -= 1;
+      snap(list, `${prefix}${monName(att)} è confuso...`, a);
+      if (Math.random() < 0.33) {
+        att.hp = Math.max(0, att.hp - Math.max(1, Math.floor(stats(att).hp / 10)));
+        snap(list, `Si colpisce da solo per la confusione!`, a);
+        if (ca.conf === 0) snap(list, `${monName(att)} si è ripreso dalla confusione!`, a);
+        burnTick(list, att, a);
+        return;
+      }
+      if (ca.conf === 0) snap(list, `${monName(att)} si è ripreso dalla confusione!`, a);
+    }
     const before = def.hp;
-    const lines = attack(att, def, mv, prefix);
+    const lines = attack(att, def, mv, prefix, ca.atk, cd.def);
     const dmg = before - def.hp;
     lines.forEach((t, i) => {
       snap(list, t, a);
@@ -132,7 +175,47 @@ export function Battle({ setup, party: initialParty, items, onEnd }: { setup: Ba
         };
       }
     });
+    const fx = MOVES[mv].fx;
+    const missed = lines.some((l) => l.includes("manca"));
+    if (fx && !missed && Math.random() * 100 < fx.p) {
+      const self = fx.k.startsWith("self");
+      const who = self ? att : def;
+      const c = self ? ca : cd;
+      if (who.hp > 0) {
+        const n = `${monName(who)} ${E.current.includes(who) ? "nemico" : "(tuo)"}`;
+        const bump = (key: "atk" | "def" | "spd", d: number, label: string) => {
+          if ((d < 0 && c[key] <= -3) || (d > 0 && c[key] >= 3)) snap(list, `${label} di ${n} non può cambiare oltre!`, a);
+          else {
+            c[key] += d;
+            snap(list, `${label} di ${n} ${d < 0 ? "cala!" : "aumenta!"}`, a);
+          }
+        };
+        if (fx.k === "atkDown") bump("atk", -1, "L'attacco");
+        if (fx.k === "defDown") bump("def", -1, "La difesa");
+        if (fx.k === "spdDown") bump("spd", -1, "La velocità");
+        if (fx.k === "selfAtkUp") bump("atk", 1, "L'attacco");
+        if (fx.k === "selfDefUp") bump("def", 1, "La difesa");
+        if (fx.k === "selfSpdUp") bump("spd", 1, "La velocità");
+        if (fx.k === "confuse" && c.conf === 0) {
+          c.conf = 2 + Math.floor(Math.random() * 3);
+          snap(list, `${n} è confuso da tutte quelle chiacchiere!`, a);
+        }
+        if (fx.k === "burn" && !c.burn) {
+          c.burn = true;
+          snap(list, `${n} si scotta! Perderà PV ogni turno.`, a);
+        }
+      }
+    }
+    burnTick(list, att, a);
   };
+
+  const burnTick = (list: Step[], m: Mon, a: number) => {
+    if (!cnd(m.uid).burn || m.hp <= 0) return;
+    m.hp = Math.max(0, m.hp - Math.max(1, Math.floor(stats(m).hp / 12)));
+    snap(list, `${monName(m)} si scotta ancora... che bruciore!`, a);
+  };
+
+  const effSpd = (m: Mon) => stats(m).spd * stageMult(cnd(m.uid).spd);
 
   const resolve = (list: Step[], a: number, e: number) => {
     const foeNow = E.current[e];
@@ -141,11 +224,19 @@ export function Battle({ setup, party: initialParty, items, onEnd }: { setup: Ba
       snap(list, `${monName(foeNow)} ${setup.kind === "wild" ? "selvatico" : "nemico"} è esausto!`, a, e);
       for (const t of gainXp(meNow, xpReward(foeNow, setup.kind === "trainer"))) snap(list, t, a, e);
       const next = E.current.findIndex((m) => m.hp > 0);
+      const meDown = meNow.hp <= 0;
+      if (meDown) snap(list, `Anche ${monName(meNow)} è esausto!`, a, e);
+      const anyAlive = P.current.some((m) => m.hp > 0);
+      if (next >= 0 && meDown && !anyAlive) {
+        snap(list, "Non hai più mostri in grado di lottare... Ti gira la testa e svieni.", a, e);
+        play(list, () => finish("lose"));
+        return;
+      }
       if (next >= 0) {
         if (!seen.current.includes(E.current[next].s)) seen.current.push(E.current[next].s);
         play(list, () => {
           setEi(next);
-          play([{ text: `${setup.trainerName} manda in campo ${monName(E.current[next])}!`, php: meNow.hp, ehp: E.current[next].hp }], () => setPhase("menu"));
+          play([{ text: `${setup.trainerName} manda in campo ${monName(E.current[next])}!`, php: meNow.hp, ehp: E.current[next].hp }], () => setPhase(meDown ? "forceSwitch" : "menu"));
         });
       } else {
         if (setup.kind === "trainer") snap(list, `Hai sconfitto ${setup.trainerName}!`, a, e);
@@ -176,13 +267,13 @@ export function Battle({ setup, party: initialParty, items, onEnd }: { setup: Ba
   const doMove = (mv: string) => {
     hap("heavy");
     const list: Step[] = [];
-    const meFirst = stats(me).spd >= stats(foe).spd;
+    const meFirst = effSpd(me) >= effSpd(foe);
     if (meFirst) {
       hit(list, me, foe, mv, "foe", act);
-      if (foe.hp > 0) enemyTurn(list, act);
+      if (foe.hp > 0 && me.hp > 0) enemyTurn(list, act);
     } else {
       enemyTurn(list, act);
-      if (me.hp > 0) hit(list, me, foe, mv, "foe", act);
+      if (me.hp > 0 && foe.hp > 0) hit(list, me, foe, mv, "foe", act);
     }
     resolve(list, act, ei);
   };
@@ -217,7 +308,7 @@ export function Battle({ setup, party: initialParty, items, onEnd }: { setup: Ba
       play([{ text: "Non si scappa da un emiliano che ti ha sfidato! Sarebbe un disonore per tre generazioni.", php: me.hp, ehp: foe.hp }], () => setPhase("menu"));
       return;
     }
-    if (stats(me).spd >= stats(foe).spd || Math.random() < 0.7) {
+    if (effSpd(me) >= effSpd(foe) || Math.random() < 0.7) {
       play([{ text: "Te la sei svignata. Con eleganza, più o meno.", php: me.hp, ehp: foe.hp }], () => finish("flee"));
       return;
     }
@@ -252,6 +343,7 @@ export function Battle({ setup, party: initialParty, items, onEnd }: { setup: Ba
 
   const switchTo = (i: number, forced: boolean) => {
     hap("selection");
+    cond.current[P.current[act].uid] = { atk: 0, def: 0, spd: 0, conf: 0, burn: false };
     setAct(i);
     const list: Step[] = [{ text: `Vai, ${monName(P.current[i])}!`, php: P.current[i].hp, ehp: foe.hp }];
     if (forced) {
@@ -275,6 +367,7 @@ export function Battle({ setup, party: initialParty, items, onEnd }: { setup: Ba
             <PixelText style={styles.monName} numberOfLines={1}>{monName(foe)}</PixelText>
             <PixelText style={styles.lv}>Lv{foe.lv} · {TYPES[SPECIES[foe.s].type].name}</PixelText>
             <HpBar hp={ehp} max={foeMax} testID="battle-enemy-hp" />
+            {chips(foe, "battle-enemy-status", showing?.conds)}
           </View>
           <View style={styles.spriteWrap}>
             <View style={[styles.ground, setup.field === "beach" && styles.groundBeach]} />
@@ -296,6 +389,7 @@ export function Battle({ setup, party: initialParty, items, onEnd }: { setup: Ba
             <PixelText style={styles.monName} numberOfLines={1}>{monName(me)}</PixelText>
             <PixelText style={styles.lv}>Lv{me.lv}</PixelText>
             <HpBar hp={php} max={meMax} testID="battle-player-hp" />
+            {chips(me, "battle-player-status", showing?.conds)}
             <PixelText style={styles.hpText} testID="battle-player-hp-text">{php}/{meMax} PV</PixelText>
           </View>
         </View>
@@ -329,6 +423,7 @@ export function Battle({ setup, party: initialParty, items, onEnd }: { setup: Ba
                   <Pressable key={mv} testID={`battle-move-${mv}`} onPress={() => doMove(mv)} style={({ pressed }) => [styles.move, { borderLeftColor: TYPES[m.type].color, opacity: pressed ? 0.7 : 1 }]}>
                     <PixelText style={styles.moveName} numberOfLines={2}>{m.name}</PixelText>
                     <PixelText style={[styles.moveMeta, { color: TYPES[m.type].color }]}>{TYPES[m.type].name} · {m.power}</PixelText>
+                    {m.fx && <PixelText style={styles.fxHint}>{m.fx.p}% {FX_LABEL[m.fx.k]}</PixelText>}
                   </Pressable>
                 );
               })}
@@ -426,6 +521,10 @@ const styles = StyleSheet.create({
   root: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.surface },
   scene: { flex: 1, justifyContent: "space-around", paddingHorizontal: 16, overflow: "hidden" },
   groundBeach: { backgroundColor: "#d9bf86" },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: 4 },
+  chip: { paddingHorizontal: 4, paddingVertical: 1, borderWidth: 1, borderColor: colors.onSurface },
+  chipTxt: { fontSize: 11, color: colors.onBrandPrimary },
+  fxHint: { fontSize: 11, color: colors.muted, marginTop: 2 },
   flash: { ...StyleSheet.absoluteFillObject, backgroundColor: "#fff8e1" },
   foeRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   meRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },

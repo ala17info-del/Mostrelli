@@ -27,11 +27,14 @@ export function effectiveness(moveType: string, defType: string): number {
 export const monName = (m: Mon) => SPECIES[m.s].name;
 
 // Mutates def.hp; returns message lines.
-export function attack(att: Mon, def: Mon, moveId: string, prefix = ""): string[] {
+export const stageMult = (st: number) => (st >= 0 ? (2 + st) / 2 : 2 / (2 - st));
+
+export function attack(att: Mon, def: Mon, moveId: string, prefix = "", atkStage = 0, defStage = 0): string[] {
   const mv = MOVES[moveId];
   const lines = [`${prefix}${monName(att)} usa ${mv.name}!`];
   if (Math.random() * 100 > mv.acc) return [...lines, "Ma lo manca clamorosamente!"];
-  const A = stats(att), D = stats(def);
+  const A0 = stats(att), D0 = stats(def);
+  const A = { ...A0, atk: A0.atk * stageMult(atkStage) }, D = { ...D0, def: D0.def * stageMult(defStage) };
   const atkType = SPECIES[att.s].type, defType = SPECIES[def.s].type;
   const eff = effectiveness(mv.type, defType);
   const crit = Math.random() < 1 / 16 ? 1.5 : 1;

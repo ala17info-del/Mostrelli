@@ -20,30 +20,35 @@ export const EFF: Partial<Record<TypeId, Partial<Record<TypeId, number>>>> = {
   chiacchiera: { motore: 2, nebbia: 0.5 },
 };
 
-export type Move = { name: string; type: TypeId; power: number; acc: number };
+export type FxKind = "atkDown" | "defDown" | "spdDown" | "confuse" | "burn" | "selfAtkUp" | "selfDefUp" | "selfSpdUp";
+export type Move = { name: string; type: TypeId; power: number; acc: number; fx?: { k: FxKind; p: number } };
+export const FX_LABEL: Record<FxKind, string> = {
+  atkDown: "ATT nemico giù", defDown: "DIF nemica giù", spdDown: "VEL nemica giù", confuse: "Confonde",
+  burn: "Scotta", selfAtkUp: "Tuo ATT su", selfDefUp: "Tua DIF su", selfSpdUp: "Tua VEL su",
+};
 export const MOVES: Record<string, Move> = {
   sberla: { name: "Sberla", type: "chiacchiera", power: 40, acc: 100 },
-  chiacchierata: { name: "Chiacchierata Infinita", type: "chiacchiera", power: 55, acc: 95 },
-  lamentela: { name: "Lamentela al Comune", type: "chiacchiera", power: 70, acc: 90 },
-  ragu: { name: "Schizzo di Ragù", type: "sugo", power: 45, acc: 100 },
-  brodo: { name: "Brodo Bollente", type: "sugo", power: 65, acc: 95 },
-  forno: { name: "Lasagna al Forno", type: "sugo", power: 85, acc: 85 },
-  fango: { name: "Spruzzo di Fango", type: "terme", power: 45, acc: 100 },
-  vapore: { name: "Getto Termale", type: "terme", power: 65, acc: 95 },
-  sauna: { name: "Sauna Infernale", type: "terme", power: 85, acc: 85 },
-  grappolo: { name: "Grappolata", type: "campi", power: 45, acc: 100 },
-  vendemmia: { name: "Vendemmia", type: "campi", power: 65, acc: 95 },
-  trattore: { name: "Trattore Selvaggio", type: "campi", power: 85, acc: 85 },
-  rombo: { name: "Rombo", type: "motore", power: 45, acc: 100 },
-  sgommata: { name: "Sgommata", type: "motore", power: 65, acc: 95 },
-  girovel: { name: "Giro Veloce", type: "motore", power: 85, acc: 85 },
-  foschia: { name: "Foschia", type: "nebbia", power: 45, acc: 100 },
-  nebbione: { name: "Nebbione Padano", type: "nebbia", power: 65, acc: 95 },
-  puntura: { name: "Puntura Estense", type: "nebbia", power: 85, acc: 85 },
-  onda: { name: "Onda Anomala", type: "terme", power: 75, acc: 90 },
-  musica: { name: "Musica a Palla", type: "motore", power: 75, acc: 90 },
-  furto: { name: "Furto di Piadina", type: "chiacchiera", power: 60, acc: 100 },
-  ombra: { name: "Ombra di Prima Fila", type: "campi", power: 70, acc: 95 },
+  chiacchierata: { name: "Chiacchierata Infinita", type: "chiacchiera", power: 55, acc: 95, fx: { k: "confuse", p: 30 } },
+  lamentela: { name: "Lamentela al Comune", type: "chiacchiera", power: 70, acc: 90, fx: { k: "defDown", p: 40 } },
+  ragu: { name: "Schizzo di Ragù", type: "sugo", power: 45, acc: 100, fx: { k: "burn", p: 20 } },
+  brodo: { name: "Brodo Bollente", type: "sugo", power: 65, acc: 95, fx: { k: "burn", p: 30 } },
+  forno: { name: "Lasagna al Forno", type: "sugo", power: 85, acc: 85, fx: { k: "burn", p: 20 } },
+  fango: { name: "Spruzzo di Fango", type: "terme", power: 45, acc: 100, fx: { k: "spdDown", p: 40 } },
+  vapore: { name: "Getto Termale", type: "terme", power: 65, acc: 95, fx: { k: "defDown", p: 30 } },
+  sauna: { name: "Sauna Infernale", type: "terme", power: 85, acc: 85, fx: { k: "atkDown", p: 30 } },
+  grappolo: { name: "Grappolata", type: "campi", power: 45, acc: 100, fx: { k: "atkDown", p: 30 } },
+  vendemmia: { name: "Vendemmia", type: "campi", power: 65, acc: 95, fx: { k: "selfAtkUp", p: 30 } },
+  trattore: { name: "Trattore Selvaggio", type: "campi", power: 85, acc: 85, fx: { k: "defDown", p: 30 } },
+  rombo: { name: "Rombo", type: "motore", power: 45, acc: 100, fx: { k: "selfSpdUp", p: 40 } },
+  sgommata: { name: "Sgommata", type: "motore", power: 65, acc: 95, fx: { k: "spdDown", p: 30 } },
+  girovel: { name: "Giro Veloce", type: "motore", power: 85, acc: 85, fx: { k: "selfSpdUp", p: 30 } },
+  foschia: { name: "Foschia", type: "nebbia", power: 45, acc: 100, fx: { k: "spdDown", p: 50 } },
+  nebbione: { name: "Nebbione Padano", type: "nebbia", power: 65, acc: 95, fx: { k: "confuse", p: 30 } },
+  puntura: { name: "Puntura Estense", type: "nebbia", power: 85, acc: 85, fx: { k: "defDown", p: 30 } },
+  onda: { name: "Onda Anomala", type: "terme", power: 75, acc: 90, fx: { k: "spdDown", p: 30 } },
+  musica: { name: "Musica a Palla", type: "motore", power: 75, acc: 90, fx: { k: "confuse", p: 30 } },
+  furto: { name: "Furto di Piadina", type: "chiacchiera", power: 60, acc: 100, fx: { k: "atkDown", p: 30 } },
+  ombra: { name: "Ombra di Prima Fila", type: "campi", power: 70, acc: 95, fx: { k: "selfDefUp", p: 40 } },
 };
 
 export type Species = {
