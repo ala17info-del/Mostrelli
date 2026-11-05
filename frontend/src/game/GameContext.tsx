@@ -18,7 +18,7 @@ export type Save = {
   seen: string[];
   caught: string[];
   money: number;
-  items: { vasetto: number; brodino: number };
+  items: Record<string, number>;
   defeated: string[];
   badges: string[];
   lastHeal: { map: string; x: number; y: number };
@@ -29,7 +29,7 @@ export function newSave(name: string, starter: string): Save {
     name, map: "bologna", x: 7, y: 7, dir: "down",
     party: [makeMon(starter, 5)], box: [],
     seen: [starter], caught: [starter],
-    money: 150, items: { vasetto: 5, brodino: 3 },
+    money: 150, items: { vasetto: 5, brodino: 3, tortellini: 1, caffe: 1 },
     defeated: [], badges: [],
     lastHeal: { map: "bologna", ...MAPS.bologna.heal },
   };
@@ -109,7 +109,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const sub = AppState.addEventListener("change", (s) => {
       if (s !== "active") flush();
     });
-    return () => sub.remove();
+    const doc = (globalThis as any).document;
+    const onHide = () => {
+      if (doc?.visibilityState === "hidden") flush();
+    };
+    doc?.addEventListener?.("visibilitychange", onHide);
+    return () => {
+      sub.remove();
+      doc?.removeEventListener?.("visibilitychange", onHide);
+    };
   }, [flush]);
 
   const reset = useCallback(async () => {

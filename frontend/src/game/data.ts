@@ -40,43 +40,61 @@ export const MOVES: Record<string, Move> = {
   foschia: { name: "Foschia", type: "nebbia", power: 45, acc: 100 },
   nebbione: { name: "Nebbione Padano", type: "nebbia", power: 65, acc: 95 },
   puntura: { name: "Puntura Estense", type: "nebbia", power: 85, acc: 85 },
+  onda: { name: "Onda Anomala", type: "terme", power: 75, acc: 90 },
+  musica: { name: "Musica a Palla", type: "motore", power: 75, acc: 90 },
+  furto: { name: "Furto di Piadina", type: "chiacchiera", power: 60, acc: 100 },
+  ombra: { name: "Ombra di Prima Fila", type: "campi", power: 70, acc: 95 },
 };
 
 export type Species = {
   id: string; num: number; name: string; type: TypeId;
   hp: number; atk: number; def: number; spd: number;
   catchRate: number; moves: [string, number][]; desc: string;
+  evo?: { to: string; lv: number };
 };
 
 const sp = (s: Species) => s;
 export const SPECIES_LIST: Species[] = [
-  sp({ id: "tortellotto", num: 1, name: "Tortellotto", type: "sugo", hp: 45, atk: 52, def: 43, spd: 60, catchRate: 0.4, moves: [["sberla", 1], ["ragu", 1], ["brodo", 10], ["forno", 20]], desc: "Un tortellino ripieno di orgoglio bolognese. Se lo chiami 'raviolo' ti morde il naso." }),
-  sp({ id: "fanghino", num: 2, name: "Fanghino", type: "terme", hp: 50, atk: 45, def: 55, spd: 45, catchRate: 0.4, moves: [["sberla", 1], ["fango", 1], ["vapore", 10], ["sauna", 20]], desc: "Rana di fango termale. Giura che fa benissimo alla pelle, lo dice suo cugino quasi medico." }),
-  sp({ id: "grappolino", num: 3, name: "Grappolino", type: "campi", hp: 48, atk: 49, def: 50, spd: 50, catchRate: 0.4, moves: [["sberla", 1], ["grappolo", 1], ["vendemmia", 10], ["trattore", 20]], desc: "Grappolo d'uva dei colli con le gambe. Alle quattro del pomeriggio è già allegro." }),
+  sp({ id: "tortellotto", num: 1, name: "Tortellotto", type: "sugo", hp: 45, atk: 52, def: 43, spd: 60, catchRate: 0.4, moves: [["sberla", 1], ["ragu", 1], ["brodo", 10], ["forno", 20]], desc: "Un tortellino ripieno di orgoglio bolognese. Se lo chiami 'raviolo' ti morde il naso.", evo: { to: "tortellone", lv: 16 } }),
+  sp({ id: "fanghino", num: 2, name: "Fanghino", type: "terme", hp: 50, atk: 45, def: 55, spd: 45, catchRate: 0.4, moves: [["sberla", 1], ["fango", 1], ["vapore", 10], ["sauna", 20]], desc: "Rana di fango termale. Giura che fa benissimo alla pelle, lo dice suo cugino quasi medico.", evo: { to: "fangone", lv: 16 } }),
+  sp({ id: "grappolino", num: 3, name: "Grappolino", type: "campi", hp: 48, atk: 49, def: 50, spd: 50, catchRate: 0.4, moves: [["sberla", 1], ["grappolo", 1], ["vendemmia", 10], ["trattore", 20]], desc: "Grappolo d'uva dei colli con le gambe. Alle quattro del pomeriggio è già allegro.", evo: { to: "vendemmione", lv: 16 } }),
   sp({ id: "mortazzone", num: 4, name: "Mortazzone", type: "chiacchiera", hp: 70, atk: 50, def: 55, spd: 30, catchRate: 0.6, moves: [["sberla", 1], ["chiacchierata", 8], ["lamentela", 16], ["brodo", 22]], desc: "Maiale rosa a fette con pistacchi. Si offende a morte se lo chiami 'Bologna' all'americana." }),
-  sp({ id: "umarellino", num: 5, name: "Umarellino", type: "chiacchiera", hp: 40, atk: 35, def: 60, spd: 25, catchRate: 0.7, moves: [["sberla", 1], ["chiacchierata", 5], ["lamentela", 12], ["foschia", 18]], desc: "Spiritello pensionato con le mani dietro la schiena. Compare davanti a ogni cantiere per criticare." }),
+  sp({ id: "umarellino", num: 5, name: "Umarellino", type: "chiacchiera", hp: 40, atk: 35, def: 60, spd: 25, catchRate: 0.7, moves: [["sberla", 1], ["chiacchierata", 5], ["lamentela", 12], ["foschia", 18]], desc: "Spiritello pensionato con le mani dietro la schiena. Compare davanti a ogni cantiere per criticare.", evo: { to: "umarellone", lv: 14 } }),
   sp({ id: "zanzarone", num: 6, name: "Zanzarone", type: "nebbia", hp: 35, atk: 55, def: 35, spd: 75, catchRate: 0.5, moves: [["sberla", 1], ["foschia", 1], ["puntura", 12], ["nebbione", 18]], desc: "Zanzara della pianura grande come un piccione. Da giugno a settembre comanda lei." }),
   sp({ id: "nebbiolone", num: 7, name: "Nebbiolone", type: "nebbia", hp: 55, atk: 50, def: 60, spd: 40, catchRate: 0.45, moves: [["foschia", 1], ["sberla", 1], ["nebbione", 12], ["puntura", 22]], desc: "Fantasma di nebbia ferrarese. Lo vedi solo nei giorni in cui non c'è." }),
   sp({ id: "salamone", num: 8, name: "Salamone", type: "sugo", hp: 65, atk: 60, def: 50, spd: 35, catchRate: 0.45, moves: [["sberla", 1], ["ragu", 1], ["brodo", 10], ["forno", 18]], desc: "Salama da sugo vivente. Cuoce da sei ore e non ha nessuna fretta." }),
   sp({ id: "biciclone", num: 9, name: "Biciclone", type: "motore", hp: 45, atk: 55, def: 45, spd: 80, catchRate: 0.45, moves: [["sberla", 1], ["rombo", 1], ["sgommata", 12], ["girovel", 20]], desc: "Serpente con due ruote. Suona il campanello e non si ferma mai, nemmeno col rosso." }),
   sp({ id: "pistonzo", num: 10, name: "Pistonzo", type: "motore", hp: 50, atk: 65, def: 55, spd: 65, catchRate: 0.45, moves: [["sberla", 1], ["rombo", 1], ["sgommata", 10], ["girovel", 18]], desc: "Scarabeo con pistoni al posto delle zampe. Vive vicino all'autodromo e sogna il podio." }),
   sp({ id: "vaporella", num: 11, name: "Vaporella", type: "terme", hp: 45, atk: 50, def: 45, spd: 70, catchRate: 0.5, moves: [["sberla", 1], ["fango", 1], ["vapore", 10], ["sauna", 20]], desc: "Uccellino fatto di vapore termale. Profuma leggermente di zolfo e di accappatoio." }),
-  sp({ id: "cinghialotto", num: 12, name: "Cinghialotto", type: "campi", hp: 60, atk: 65, def: 50, spd: 40, catchRate: 0.5, moves: [["sberla", 1], ["grappolo", 1], ["vendemmia", 10], ["trattore", 16]], desc: "Cinghiale delle colline. Distrugge le vigne e poi se ne vanta al bar." }),
+  sp({ id: "cinghialotto", num: 12, name: "Cinghialotto", type: "campi", hp: 60, atk: 65, def: 50, spd: 40, catchRate: 0.5, moves: [["sberla", 1], ["grappolo", 1], ["vendemmia", 10], ["trattore", 16]], desc: "Cinghiale delle colline. Distrugge le vigne e poi se ne vanta al bar.", evo: { to: "cinghialone", lv: 18 } }),
   sp({ id: "squacquerone", num: 13, name: "Squacquerone", type: "chiacchiera", hp: 60, atk: 40, def: 45, spd: 35, catchRate: 0.65, moves: [["sberla", 1], ["fango", 4], ["chiacchierata", 10], ["lamentela", 18]], desc: "Formaggio molle e chiacchierone. Si spalma su qualsiasi conversazione, invitato o no." }),
   sp({ id: "piadinone", num: 14, name: "Piadinone", type: "campi", hp: 55, atk: 50, def: 65, spd: 30, catchRate: 0.55, moves: [["sberla", 1], ["grappolo", 1], ["vendemmia", 10], ["trattore", 18]], desc: "Tartaruga col guscio di piadina. Viene dalla Romagna e non smette un secondo di ricordartelo." }),
   sp({ id: "passatellone", num: 15, name: "Passatellone", type: "sugo", hp: 50, atk: 55, def: 45, spd: 55, catchRate: 0.55, moves: [["sberla", 1], ["ragu", 1], ["brodo", 9], ["forno", 19]], desc: "Verme di passatelli che nuota nel brodo. Si arriccia tutto quando è contento." }),
   sp({ id: "portichino", num: 16, name: "Portichino", type: "chiacchiera", hp: 80, atk: 70, def: 80, spd: 30, catchRate: 0.25, moves: [["sberla", 1], ["chiacchierata", 1], ["lamentela", 10], ["forno", 15]], desc: "Golem fatto di portici. Ti ripara sempre dalla pioggia, ma poi ti chiede 600 euro d'affitto." }),
+  sp({ id: "tortellone", num: 17, name: "Tortellone", type: "sugo", hp: 78, atk: 84, def: 70, spd: 80, catchRate: 0.15, moves: [["ragu", 1], ["brodo", 1], ["forno", 16], ["lamentela", 24]], desc: "Tortellotto diventato gigante a forza di domeniche dalla nonna. Ripieno di carne e di arroganza." }),
+  sp({ id: "fangone", num: 18, name: "Fangone", type: "terme", hp: 82, atk: 75, def: 85, spd: 60, catchRate: 0.15, moves: [["fango", 1], ["vapore", 1], ["sauna", 16], ["onda", 26]], desc: "Rospo termale enorme. Chiede l'impegnativa del medico prima di ogni lotta." }),
+  sp({ id: "vendemmione", num: 19, name: "Vendemmione", type: "campi", hp: 80, atk: 80, def: 80, spd: 65, catchRate: 0.15, moves: [["grappolo", 1], ["vendemmia", 1], ["trattore", 16], ["ombra", 26]], desc: "Grappolo maturo dei colli. Dopo le sei di sera parla solo in dialetto." }),
+  sp({ id: "umarellone", num: 20, name: "Umarellone", type: "chiacchiera", hp: 72, atk: 60, def: 92, spd: 35, catchRate: 0.2, moves: [["chiacchierata", 1], ["lamentela", 1], ["foschia", 14], ["furto", 22]], desc: "Umarell anziano col bastone. Ha supervisionato tre generazioni di cantieri senza mai lavorarci." }),
+  sp({ id: "cinghialone", num: 21, name: "Cinghialone", type: "campi", hp: 92, atk: 95, def: 70, spd: 50, catchRate: 0.15, moves: [["grappolo", 1], ["vendemmia", 1], ["trattore", 18], ["ombra", 26]], desc: "Cinghiale dei colli con zanne da sagra. I cacciatori lo raccontano, nessuno l'ha mai preso." }),
+  sp({ id: "gabbianone", num: 22, name: "Gabbianone", type: "chiacchiera", hp: 55, atk: 68, def: 45, spd: 85, catchRate: 0.45, moves: [["sberla", 1], ["furto", 1], ["chiacchierata", 18], ["lamentela", 24]], desc: "Gabbiano enorme che ruba le piadine di mano ai turisti. Non prova alcuna vergogna." }),
+  sp({ id: "vongolino", num: 23, name: "Vongolino", type: "terme", hp: 50, atk: 48, def: 88, spd: 30, catchRate: 0.5, moves: [["fango", 1], ["vapore", 1], ["onda", 20], ["chiacchierata", 22]], desc: "Vongola di Riviera. Si chiude a riccio quando sente parlare di prezzi degli spaghetti allo scoglio." }),
+  sp({ id: "medusella", num: 24, name: "Medusella", type: "terme", hp: 50, atk: 62, def: 50, spd: 62, catchRate: 0.5, moves: [["fango", 1], ["vapore", 1], ["onda", 19], ["puntura", 24]], desc: "Medusa d'agosto. Compare sempre quando hai appena deciso di fare il bagno." }),
+  sp({ id: "discotecco", num: 25, name: "Discotecco", type: "motore", hp: 55, atk: 72, def: 50, spd: 78, catchRate: 0.4, moves: [["rombo", 1], ["sgommata", 1], ["musica", 20], ["girovel", 24]], desc: "Palla da discoteca vivente. Esce alle due di notte, rientra alle nove col cornetto." }),
+  sp({ id: "ombrellone", num: 26, name: "Ombrellone", type: "campi", hp: 68, atk: 58, def: 72, spd: 40, catchRate: 0.45, moves: [["sberla", 1], ["grappolo", 1], ["ombra", 19], ["furto", 23]], desc: "Ombrellone di prima fila. Costa più di un affitto in centro, e lo sa benissimo." }),
 ];
 export const SPECIES: Record<string, Species> = Object.fromEntries(SPECIES_LIST.map((s) => [s.id, s]));
 export const STARTERS = ["tortellotto", "fanghino", "grappolino"];
 
 export const ITEMS = {
-  vasetto: { name: "Vasetto di Vetro", price: 20, desc: "Per catturare i mostri selvatici. Lavato a mano dalla nonna." },
-  brodino: { name: "Brodino Caldo", price: 15, desc: "Cura 25 PV. Fatto col cappone, come Dio comanda." },
+  vasetto: { name: "Vasetto di Vetro", price: 8, kind: "catch", amount: 0, desc: "Per catturare i mostri selvatici. Lavato a mano dalla nonna." },
+  brodino: { name: "Brodino Caldo", price: 5, kind: "heal", amount: 25, desc: "Cura 25 PV. Fatto col cappone, come Dio comanda." },
+  tortellini: { name: "Tortellini in Brodo", price: 15, kind: "heal", amount: 70, desc: "Cura 70 PV. Trecento tortellini chiusi a mano, uno per uno." },
+  caffe: { name: "Caffè Ristretto", price: 25, kind: "revive", amount: 0.5, desc: "Risveglia un mostro esausto con metà dei PV. Corretto, ovviamente." },
 } as const;
 export type ItemId = keyof typeof ITEMS;
 
-export const BLOCKING = new Set(["T", "W", "R", "H", "D", "B", "S"]);
+export const BLOCKING = new Set(["T", "W", "R", "H", "D", "B", "S", "O", "U"]);
+export const ENCOUNTER_TILES = new Set(["G", "Q"]);
 
 export type Npc = {
   id: string; x: number; y: number; name: string;
@@ -157,6 +175,7 @@ export const MAPS: Record<string, GameMap> = {
       { id: "og_oste", x: 4, y: 6, name: "Oste Bruno", look: L("#ffffff", "#ffffff"), kind: "heal", lines: ["Benvenuto all'osteria! Il menu non c'è: mangi quello che dico io. Oggi crescentine. Domani pure.", "Ecco fatto, squadra sazia. Il conto? Te lo segno, tanto torni."] },
       { id: "og_sagra", x: 8, y: 3, name: "Fanatico della Sagra", look: L("#fbc02d", "#c0392b"), kind: "trainer", lines: ["Sagra della salsiccia, sagra del tortellone, sagra della sagra! Non me ne perdo una dal '78!"], team: [["mortazzone", 7], ["passatellone", 7]], reward: 90, after: ["Vado a consolarmi alla sagra della polenta. Ce n'è una stasera, sicuro."] },
       { id: "og_cacciatore", x: 6, y: 10, name: "Cacciatore Domenicale", look: L("#2e7d32", "#4e2e18"), kind: "trainer", lines: ["Ssst! Aspetto il cinghiale da sei ore. Tu mi hai fatto scappare tutto!"], team: [["cinghialotto", 8]], reward: 80, after: ["Va beh, stasera tagliatelle senza ragù di cinghiale. Colpa tua."] },
+      { id: "og_tonello", x: 3, y: 3, name: "Tonello", look: L("#7b4a2a", "#fbc02d"), kind: "trainer", lines: ["Sono Tonello, campione di briscola del bar di Osteria Grande dal 1983! Al bar mi temono tutti, anche il barista.", "Tu hai la faccia di uno che ha appena finito di perdere a carte. Vediamo se coi mostri vai meglio!"], team: [["mortazzone", 8], ["cinghialotto", 8], ["passatellone", 9]], reward: 120, after: ["Mi hai battuto come un due di picche. Torno al bar a dire che ho vinto io, tanto nessuno controlla."] },
       { id: "og_loris", x: 12, y: 6, name: "Camionista Loris", look: L("#c0392b", "#616161"), kind: "boss", badge: "Sigillo della Via Emilia", lines: ["Faccio la Via Emilia da Piacenza a Rimini da trent'anni. Conosco ogni buca e ogni autogrill per nome.", "Vediamo se reggi il ritmo di uno che pranza alle 11 e cena alle 18!"], team: [["passatellone", 10], ["cinghialotto", 11]], reward: 300, after: ["Mi hai sorpassato a destra, ma per stavolta chiudo un occhio. Ecco il Sigillo della Via Emilia."] },
     ],
   },
@@ -185,10 +204,10 @@ export const MAPS: Record<string, GameMap> = {
     tiles: [
       "TTTTTTTTTTTTTTTT", "TAAAAAAAAAAAAAAT", "TA,,,,,,,,,,,,AT", "TA,GGGG,,GGGG,AT",
       "TA,GGGG,,GGGG,AT", "TA,,,,,,,,,,,,AT", "TAAAAAAA.AAAAAAT", "T,,,,,,,.,,,,,,T",
-      "........,RRRR,,T", "T,RRR,,,,HHDH,,T", "T,HDH,,,,,,,,S,T", "T,,,,,,,,,,,,,,T",
+      "........,RRRR,,.", "T,RRR,,,,HHDH,,T", "T,HDH,,,,,,,,S,T", "T,,,,,,,,,,,,,,T",
       "TGGGGGG,,GGGGGGT", "TGGGGGG,,GGGGGGT", "TFFF,,,,,,,,FFFT", "TTTTTTTTTTTTTTTT",
     ],
-    exits: [{ x: 0, y: 8, to: "csp", tx: 14, ty: 8 }],
+    exits: [{ x: 0, y: 8, to: "csp", tx: 14, ty: 8 }, { x: 15, y: 8, to: "riviera", tx: 1, ty: 8 }],
     heal: { x: 4, y: 11 },
     wild: [["pistonzo", 11, 13, 3], ["cinghialotto", 11, 13, 2], ["vaporella", 12, 12, 1], ["biciclone", 12, 13, 1]],
     signs: { "13,10": "IMOLA: qui si va forte. Anche al bar, anche a tavola." },
@@ -199,9 +218,30 @@ export const MAPS: Record<string, GameMap> = {
       { id: "im_ivano", x: 11, y: 10, name: "Ivano detto Pistone", look: L("#fbc02d", "#c0392b"), kind: "boss", badge: "Sigillo del Rombo", lines: ["Avrei potuto essere un pilota. Davvero. Ho solo sbagliato... tutto il resto.", "Ma in lotta sono il più veloce della Romagna! ...Come, Imola è ancora un po' Emilia? Non importa. VRRRUUUM!"], team: [["pistonzo", 16], ["biciclone", 17]], reward: 500, after: ["Giù dal podio un'altra volta. Prendi il Sigillo del Rombo.", "Io torno a guardare le gare dal prato, con la mia sedia pieghevole."] },
     ],
   },
+  riviera: {
+    id: "riviera", name: "Riviera Romagnola",
+    tiles: [
+      "TTTTTTTTTTTTTTTT", "TQQQQ,,,,,RRRR,T", "TQQQQ,,,,,HHDH,T", "T,,,,,,..,,,,,,T",
+      "TRRR,,,..,,QQQQT", "THDH,,,..,,QQQQT", "T,,,,,,..,,,,,,T", "TYYYYYYYYYYYYYYT",
+      "YYYYYYYYYYYYYYYT", "TYUYYYUYYYUYYYUT", "TYYYQQYYYYYQQYYT", "TUYYQQYYUYYQQYUT",
+      "TYYYYYYYYYYYYYYT", "OOOOOOOOOOOOOOOO", "OOOOOOOOOOOOOOOO", "OOOOOOOOOOOOOOOO",
+    ],
+    exits: [{ x: 0, y: 8, to: "imola", tx: 14, ty: 8 }],
+    heal: { x: 2, y: 7 },
+    wild: [["gabbianone", 18, 21, 3], ["vongolino", 18, 21, 2], ["medusella", 18, 21, 2], ["discotecco", 19, 22, 2], ["ombrellone", 19, 22, 2]],
+    signs: {},
+    npcs: [
+      { id: "ri_piadinara", x: 2, y: 6, name: "Piadinara Loretta", look: L("#ffffff", "#e0913a"), kind: "heal", lines: ["Piadina con squacquerone e rucola, e ti passa tutto! Il prosciutto? Lo paghi a parte, tesoro.", "Ecco, squadra rimessa a nuovo. Ricordati: qui la piadina si fa SOTTILE. Chi dice il contrario è di Rimini nord o di Rimini sud, non ricordo."] },
+      { id: "ri_ambulante", x: 12, y: 3, name: "Venditore Ambulante", look: L("#fbc02d", "#ffffff"), kind: "shop", lines: ["Cocco fresco! Bibite fresche! Vasetti freschi! Tutto fresco tranne i prezzi, quelli scottano!"] },
+      { id: "ri_turista", x: 5, y: 9, name: "Turista in Sandali e Calzini", look: L("#fbc02d", "#4caf50"), kind: "trainer", lines: ["Ja! Vengo qui da 30 estati. Conosco ogni bagnino per nome, e ho sempre l'asciugamano sul lettino alle 6 di mattina!"], team: [["vongolino", 19], ["gabbianone", 20]], reward: 250, after: ["Nein! Domani mi alzo alle 5, così il lettino migliore è mio."] },
+      { id: "ri_vitellone", x: 10, y: 11, name: "Vitellone da Spiaggia", look: L("#1a1a1a", "#c0392b"), kind: "trainer", lines: ["Abbronzatura da 12 ore, camicia aperta, collanina d'oro. Ho conquistato tutta la spiaggia. Tranne mia madre, che mi chiama per il pranzo."], team: [["discotecco", 20], ["medusella", 20]], reward: 260, after: ["Ok, hai vinto. Ma stasera in discoteca il re sono io. Fino alle 23, poi devo rientrare."] },
+      { id: "ri_nonna", x: 13, y: 7, name: "Nonna con la Borsa Frigo", look: L("#cfd8dc", "#4caf50"), kind: "trainer", lines: ["In questa borsa frigo ho lasagne, cotolette, anguria e un pollo intero. Al bar? Mai! Prima però si lotta."], team: [["ombrellone", 20], ["vongolino", 21]], reward: 240, after: ["Brava, ti sei meritato una cotoletta. Fredda, ma buonissima."] },
+      { id: "ri_romeo", x: 8, y: 12, name: "Romeo, Re dei Lettini", look: L("#c0392b", "#fbc02d"), kind: "boss", badge: "Sigillo dell'Ombrellone", lines: ["Benvenuto al Bagno Mariolino 33! Prima fila 80 euro, seconda fila 75, la sabbia è gratis ma te la faccio pagare uguale.", "Quarant'anni di stagioni, migliaia di turisti, un solo amore: l'incasso di Ferragosto. Vediamo se mi rovini la stagione!"], team: [["gabbianone", 22], ["medusella", 22], ["discotecco", 24]], reward: 1000, after: ["Mi hai battuto in pieno agosto, che disonore! Prendi il Sigillo dell'Ombrellone.", "E l'ombrellone stasera te lo regalo. Il lettino no, eh."] },
+    ],
+  },
 };
 
-export const ALL_BADGES = ["Sigillo del Cantiere", "Sigillo della Via Emilia", "Sigillo delle Terme", "Sigillo del Rombo", "Sigillo Estense"];
+export const ALL_BADGES = ["Sigillo del Cantiere", "Sigillo della Via Emilia", "Sigillo delle Terme", "Sigillo del Rombo", "Sigillo Estense", "Sigillo dell'Ombrellone"];
 
 export const INTRO_LINES = [
   "Benvenuto! Io sono il Dottor Balanzone, luminare dell'Università più antica del mondo. Sì, lo ripeto spesso.",

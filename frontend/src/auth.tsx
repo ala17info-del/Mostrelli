@@ -19,10 +19,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api<User>("/auth/me")
-      .then(setUser)
-      .catch(() => storage.secureRemove(TOKEN_KEY))
-      .finally(() => setLoading(false));
+    storage.secureGet<string | null>(TOKEN_KEY, null).then((t) => {
+      if (!t) return setLoading(false);
+      api<User>("/auth/me")
+        .then(setUser)
+        .catch(() => storage.secureRemove(TOKEN_KEY))
+        .finally(() => setLoading(false));
+    });
   }, []);
 
   const handle = async (path: string, email: string, password: string) => {

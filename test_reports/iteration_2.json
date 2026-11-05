@@ -1,0 +1,41 @@
+{
+  "summary": "Iteration 2 (new features). Backend 16/16 pytest pass (14 existing + 2 new: riviera map/new item keys persisted, old item shape accepted). Frontend at 390x844, using crafted TEST_ saves: Imola (14,8)->right->'Riviera Romagnola', (1,8)->left->'Imola', back again OK; dune (Q) encounter -> beach gradient battle; Zaino shows vasetto/brodino/tortellini/caffe with counts; caffe on alive mon -> 'già sveglio' and back to bag (no consume); brodino on fainted -> refused; caffe on fainted Fanghino -> revived to 50% (15/30), enemy then attacks; brodino on Tortellotto +24 (capped), count x3->x2; vasetto catch -> 'Preso!', mon added to party, caught/seen updated; after battle the save on server had vasetto 4, brodino 2, caffe 1 and the right HPs. Trainer (boss) battle: vasetto blocked with no item used, flee blocked; Romeo boss win -> +1000 EUR, 'Sigillo dell'Ombrellone', 6/6 champion line, header 'Sigilli 6/6', menu-badges lists 6, no rematch; NPC blocks movement. Team screen: team-items header correct, team-brodino/tortellini shown only for alive mons and team-caffe only for fainted ones, messages correct, counts drop by one. Shop with old save (items missing tortellini/caffe): 4 shop-buy buttons, counts show (0) not NaN, buying works, money drops correctly. Evolution: Tortellotto Lv15 xp 4090 won a wild battle -> Lv16 -> 'si sta evolvendo' -> Tortellone (sprite + name + HP updated, save persisted as tortellone). Mostrario shows /26. Menu audio toggles acceso/spento/acceso, no page errors, no expo-audio console errors. Regression: seed login + Continua loads Rossella in Bologna (read-only, no movement). Found 1 functional gap (evolved species not added to Mostrario caught/seen) plus minor UX issues.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Evolution -> Mostrario", "issue": "gainXp changes m.s to the evolved species, but onBattleEnd never adds the new species to save.caught or save.seen. After Tortellotto->Tortellone the server save has caught=['tortellotto'] and Mostrario shows 'Visti 2 · Catturati 1 / 26' with Tortellone not registered. Reference: /app/frontend/app/game.tsx:146 (onBattleEnd), /app/frontend/src/game/engine.ts:64-72", "testID": "mostrario-count", "priority": "MEDIUM"},
+      {"component": "A button during dialog", "issue": "btn-a-interact has onPress={dialog ? undefined : interact}, so A does nothing while a dialog is open. Only tapping the dialog box advances it. Players of Game Boy-style games expect A to advance text. Reference: /app/frontend/app/game.tsx:262", "testID": "btn-a-interact", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Save debounce", "issue": "Saves are debounced by 2.5s (GameContext.tsx:81). Team-screen item uses (tortellini/caffè) made about 1s before the browser closed were lost: the server still had the old counts and HP. Battle and other changes saved fine once the 2.5s passed. Fix: flush on beforeunload/pagehide on web (fetch keepalive), or flush right after item use or leaving the team screen.", "affected_testIDs": ["team-caffe-2", "team-tortellini-1"]},
+      {"flow": "Auth boot", "issue": "AuthProvider calls GET /api/auth/me even when no token is stored, so every fresh load logs a 401 'Failed to load resource' console error (30 such 401s in the backend log). Skip the call when there is no token. Reference: /app/frontend/src/auth.tsx:22", "affected_testIDs": []}
+    ],
+    "design_issues": [
+      {"screen": "Game menu -> Mostrario/Squadra", "issues": ["While the new screen is pushed, the menu modal's fade-out shows semi-transparent on top of the Mostrario for a moment (cosmetic)."]},
+      {"screen": "Boss re-talk", "issues": ["After Romeo is beaten, talking to him again repeats 'Prendi il Sigillo dell'Ombrellone' (the after-lines). Consider a separate post-defeat line (cosmetic)."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_auth_save.py", "/app/backend/tests/test_save_iter2.py", "/app/backend/tests/setup_iter2_users.py", "/app/backend/tests/save_tool.py", "/app/test_reports/pytest/pytest_iter2.xml"],
+  "action_items": [
+    "MEDIUM: On evolution, add the evolved species to save.caught and save.seen. E.g. have the battle return the evolved species ids, or in onBattleEnd add every r.party species to caught/seen.",
+    "LOW: Make btn-a-interact advance the dialog when a dialog is open (the same handler as tapping dialog-box).",
+    "LOW: Flush the save on web pagehide/beforeunload, or right after team-screen item use, so changes are not lost inside the 2.5s debounce.",
+    "LOW: Skip /auth/me on boot when no token is stored, to avoid the 401 console error."
+  ],
+  "critical_code_review_comments": [
+    "engine.gainXp: moves learned by the evolved species at the current level are not announced after evolution (only moves from level-ups before the evolution are). Minor.",
+    "Battle.tsx is 412 lines, OK for now. game.tsx is 361 lines.",
+    "No deprecated Expo packages: expo-audio is used, no expo-av, expo-barcode-scanner or expo-background-fetch. No SafeAreaView from react-native."
+  ],
+  "updated_files": ["/app/backend/tests/test_save_iter2.py (new)", "/app/backend/tests/setup_iter2_users.py (new)", "/app/backend/tests/save_tool.py (new)"],
+  "success_rate": {"backend": "100%", "frontend": "95% (one functional gap: evolved species not registered in Mostrario)"},
+  "seed_data_creation": "Created 2 TEST users (password secret123) with crafted saves: test_it2_847bcd@example.com (Riviera, now 6/6 badges, ri_romeo defeated) and test_it2_27f8c4@example.com (Bologna, Tortellone Lv16). Each run of test_save_iter2.py also creates a throwaway test_it2_* user and deletes its save. Seed user test@bologna.it was only read (login + Continua, no movement).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Dialogs advance by clicking [data-testid=dialog-box], not the A button. The D-pad needs mouse down/up (~150ms). Crafting saves: use backend/tests/save_tool.py <email> '<json patch>' (login with secret123, GET, merge, PUT). Riviera dune encounter tiles: (4,10)/(4,11). Romeo is at (8,12): stand at (7,12) facing right. Riviera shop: stand at (11,3) facing right. Wait about 3s after UI actions before closing the browser, because of the 2.5s save debounce.",
+  "rca_of_issue": "Mostrario gap: Battle mutates P.current[a].s to evo.to inside gainXp. onBattleEnd only merges r.seen (the enemy species) into seen and r.caught (wild catches) into caught, so the new species never reaches the Mostrario lists."
+}

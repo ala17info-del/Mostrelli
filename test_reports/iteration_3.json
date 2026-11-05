@@ -1,0 +1,31 @@
+{
+  "summary": "Iteration 3 tested on the 390x844 web preview and the public backend. Every requested feature passed. Shop prices: Vasetto 8€, Brodino 5€, Tortellini 15€, Caffè 25€. Buying 1 Vasetto and 1 Brodino took money from 220€ to 207€, and the save was on the backend within about 1s. Trainer rewards are doubled: Studente showed 'Hai ricevuto 120 €' (100→220€) and Tonello showed 'Hai ricevuto 240 €' (100→340€). A wild win against a Lv3 monster paid +34€ (10+3*8) and showed a '+34 €' toast. Losing kept 75% of the money (1000→750€), healed the team and returned the player to the heal spot. Map markers rendered: marker-heal-bo_sfoglina (CURA), marker-shop-bo_bottega (MARKET), marker-heal-og_oste, crossed swords on trainers and a crown on bosses. Tonello (npc-og_tonello): 2-line dialog, battle with Mortazzone, Cinghialotto and Passatellone in order, defeat saved, re-talk shows only the after line. Battle effects: floating damage numbers (-27, -29) and target blink appeared in screenshots, and the super-effective path ran with no errors. No crashes or console errors across multi-turn battles, Brodino use in battle, voluntary switch, forced switch, catch (Mortazzone) and evolution (Fanghino to Fangone). Fixes from iteration 2 confirmed: Fangone was added to caught/seen and persisted; the A button advances an open dialog; Brodino use on the team screen was saved quickly; a fresh load with no token gave 0 console errors (no 401); a beaten boss (Gino) repeats only his last line. Holding the D-pad walked 10 tiles in 1.78s (about 170ms per step, no freeze). Exits Bologna→Osteria Grande and Imola→Riviera work, 'Salva ora' works, and login + continue work for test@bologna.it. Existing backend pytest suite: 16/16 passed. Deprecated packages detected: none (no expo-av, expo-barcode-scanner or expo-background-fetch).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Overworld map (TileMap.tsx:61-65)", "issues": ["Defeated trainers and beaten bosses keep the crossed-swords or crown badge, so the player cannot tell who is still to fight. Consider dimming the badge or showing a check mark when save.defeated includes the NPC id (would need a defeated prop on TileMap)."]},
+      {"screen": "Overworld map", "issues": ["The map-change toast at the top centre can cover NPC badges on the top visible row for about 2s. Cosmetic only."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/setup_iter3_users.py", "/app/backend/tests/save_tool.py", "/app/backend/tests/test_auth_save.py", "/app/backend/tests/test_save_iter2.py", "/app/test_reports/pytest/pytest_iter3.xml"],
+  "action_items": [
+    "LOW (optional UX): Mark defeated trainers and bosses differently on the map (dimmed badge or check icon).",
+    "LOW: Movement-only changes still rely on the 2.5s save debounce. Consider flushing on web pagehide/visibilitychange so position is not lost if the tab closes right after walking."
+  ],
+  "critical_code_review_comments": [
+    "game.tsx onBattleEnd: reward*2, wildPay = 10+lv*8 and the 75% loss rule match the spec. The party-species loop correctly adds evolved species to caught/seen.",
+    "The Tonello teleport hint in the review request, osteria (3,4), is a roof tile ('R', which blocks movement). During play Tonello is reached from (2,3), (4,3) or (3,2). This only affects crafted test saves, not gameplay.",
+    "PixelSprite caches Scale2x grids per name and merges horizontal runs, so performance is fine on web. On native devices the fractional px sizes may show hairline seams; worth checking on device.",
+    "Catch rate at full HP is about 26% for catchRate 0.7, so 6 failed throws in a row happened once. That is within expected odds, not a bug."
+  ],
+  "updated_files": ["/app/frontend/src/game/TileMap.tsx (added testID marker-trainer-<id> / marker-boss-<id> on trainer and boss badges)", "/app/backend/tests/setup_iter3_users.py (new helper)"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "Created TEST_ users with password secret123: test_it3_b94d33@example.com (Osteria, Tonello beaten, 340€), test_it3_c3733e@example.com (Bologna, Studente and Gino beaten), test_it3_6c8252@example.com (Riviera, Fangone/Tortellotto/Mortazzone). They were not deleted because there is no account-delete endpoint. test@bologna.it was only logged in and its save was not modified.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Use backend/tests/save_tool.py <email> '<json patch>' to craft saves. In the Bologna grass (8,12)/(8,13), alternate up/down D-pad taps to trigger encounters (Lv3-5). To face Gino, stand at (9,5) facing up. To face the shop, stand at (13,4) facing up. Tonello is at osteria (3,3). The A button now advances dialogs. Map markers have testIDs marker-{heal|shop|trainer|boss}-{npcId}, and they render only when the NPC is inside the viewport.",
+  "rca_of_issue": ""
+}

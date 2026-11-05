@@ -1,6 +1,7 @@
 import * as Haptics from "expo-haptics";
 import React from "react";
 import { Platform, Pressable, StyleSheet, Text, View, ViewStyle } from "react-native";
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 
 import { colors, FONT } from "@/src/theme";
 
@@ -48,9 +49,14 @@ export function RetroButton({ label, onPress, variant = "primary", testID, disab
 export function HpBar({ hp, max, testID }: { hp: number; max: number; testID?: string }) {
   const r = Math.max(0, Math.min(1, hp / max));
   const c = r > 0.5 ? colors.success : r > 0.2 ? colors.warning : colors.error;
+  const w = useSharedValue(r);
+  React.useEffect(() => {
+    w.value = withTiming(r, { duration: 450 });
+  }, [r, w]);
+  const st = useAnimatedStyle(() => ({ width: `${w.value * 100}%` }));
   return (
     <View testID={testID} style={styles.hpOuter}>
-      <View style={{ width: `${r * 100}%`, height: "100%", backgroundColor: c }} />
+      <Animated.View style={[{ height: "100%", backgroundColor: c }, st]} />
     </View>
   );
 }

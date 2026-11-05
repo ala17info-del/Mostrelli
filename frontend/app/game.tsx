@@ -2,12 +2,13 @@ import MaterialDesignIcons from "@react-native-vector-icons/material-design-icon
 import { Redirect, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import { LayoutChangeEvent, Modal, Pressable, StyleSheet, View } from "react-native";
-import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import Animated, { FadeIn, FadeInDown, FadeOut } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/src/auth";
 import { Battle, BattleResult, BattleSetup } from "@/src/game/Battle";
-import { ALL_BADGES, BLOCKING, ITEMS, ItemId, MAPS, Npc } from "@/src/game/data";
+import { initAudio, isMuted, playBgm, setMuted, sfx } from "@/src/game/audio";
+import { ALL_BADGES, BLOCKING, ENCOUNTER_TILES, ITEMS, ItemId, MAPS, Npc } from "@/src/game/data";
 import { healAll, makeMon, monName, rollWild, stats } from "@/src/game/engine";
 import { Save, useGame } from "@/src/game/GameContext";
 import { TileMap } from "@/src/game/TileMap";
@@ -36,6 +37,17 @@ export default function GameScreen() {
   const busyRef = useRef(false);
   busyRef.current = !!dialog || !!battle || menu || shop;
   const holdTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [flash, setFlash] = useState(false);
+  const [muted, setMutedState] = useState(isMuted());
+  const mapId = save?.map;
+  const inBattle = !!battle;
+  useEffect(() => {
+    initAudio().then(() => {
+      setMutedState(isMuted());
+      if (!mapId) return;
+      playBgm(inBattle ? "battle" : mapId === "riviera" ? "beach" : "town");
+    });
+  }, [mapId, inBattle]);
 
   useEffect(() => () => { if (holdTimer.current) clearInterval(holdTimer.current); }, []);
   useEffect(() => {
@@ -72,11 +84,18 @@ export default function GameScreen() {
       return;
     }
     setSave((p) => ({ ...p, x: nx, y: ny, dir }));
-    if (ch === "G" && Math.random() < ENCOUNTER && s.party.some((p) => p.hp > 0)) {
+    sfx("step", 0.25);
+    if (ENCOUNTER_TILES.has(ch) && Math.random() < ENCOUNTER && s.party.some((p) => p.hp > 0)) {
       stopHold();
       busyRef.current = true;
       hap("heavy");
-      setBattle({ kind: "wild", enemies: [rollWild(s.map)] });
+      sfx("encounter");
+      setFlash(true);
+      const enemy = rollWild(s.map);
+      setTimeout(() => {
+        setFlash(false);
+        setBattle({ kind: "wild", enemies: [enemy], field: s.map === "riviera" ? "beach" : "grass" });
+      }, 550);
     }
   };
 
@@ -104,6 +123,7 @@ export default function GameScreen() {
       return say(npc.name, npc.lines, () => {
         setSave((p) => ({ ...p, party: healAll(p.party), lastHeal: { map: p.map, ...MAPS[p.map].heal } }));
         hap("success");
+        sfx("heal");
         setToast("Squadra curata!");
       });
     }
@@ -112,17 +132,20 @@ export default function GameScreen() {
       if (!save.party.some((p) => p.hp > 0)) return say(npc.name, ["La tua squadra è a pezzi! Vai prima a mangiare qualcosa, poi ne riparliamo."]);
       return say(npc.name, npc.lines, () => {
         hap("heavy");
-        setBattle({ kind: "trainer", trainerName: npc.name, npc, enemies: (npc.team ?? []).map(([s, l]) => makeMon(s, l)) });
+        sfx("encounter");
+        setBattle({ kind: "trainer", trainerName: npc.name, npc, field: save.map === "riviera" ? "beach" : "grass", enemies: (npc.team ?? []).map(([s, l]) => makeMon(s, l)) });
       });
     }
-    say(npc.name, npc.after ?? npc.lines);
+    say(npc.name, npc.after ? [npc.after[npc.after.length - 1]] : npc.lines);
   };
 
   const onBattleEnd = (r: BattleResult) => {
     const npc = battle?.npc;
+    const wildPay = 10 + (battle?.enemies[0]?.lv ?? 1) * 8;
     let after: { speaker: string; lines: string[] } | null = null;
     setSave((s) => {
-      const n: Save = { ...s, party: r.party, seen: Array.from(new Set([...s.seen, ...r.seen])), items: { ...s.items, vasetto: s.items.vasetto - r.vasettiUsed } };
+      const n: Save = { ...s, party: r.party, seen: Array.from(new Set([...s.seen, ...r.seen])), items: { ...s.items } };
+      for (const [k, v] of Object.entries(r.itemsUsed)) n.items[k] = (n.items[k] ?? 0) - (v ?? 0);
       if (r.caught) {
         const c = { ...r.caught, uid: Math.random().toString(36).slice(2, 10) };
         n.caught = Array.from(new Set([...n.caught, c.s]));
@@ -131,31 +154,37 @@ export default function GameScreen() {
       }
       if (r.outcome === "win" && npc) {
         n.defeated = Array.from(new Set([...n.defeated, npc.id]));
-        n.money += npc.reward ?? 0;
+        n.money += (npc.reward ?? 0) * 2;
         if (npc.badge) n.badges = Array.from(new Set([...n.badges, npc.badge]));
+      }
+      if (r.outcome === "win" && !npc) n.money += wildPay;
+      for (const m of n.party) {
+        if (!n.caught.includes(m.s)) n.caught = [...n.caught, m.s];
+        if (!n.seen.includes(m.s)) n.seen = [...n.seen, m.s];
       }
       if (r.outcome === "lose") {
         n.party = healAll(n.party);
         n.map = s.lastHeal.map;
         n.x = s.lastHeal.x;
         n.y = s.lastHeal.y;
-        n.money = Math.floor(s.money / 2);
+        n.money = Math.floor(s.money * 0.75);
       }
       return n;
     });
     if (r.outcome === "win" && npc) {
-      const lines = [...(npc.after ?? []), `Hai ricevuto ${npc.reward} €.`];
+      const lines = [...(npc.after ?? []), `Hai ricevuto ${(npc.reward ?? 0) * 2} €.`];
       if (npc.badge) {
         lines.push(`Ottieni il ${npc.badge}!`);
         const total = new Set([...save.badges, npc.badge]).size;
-        if (total === ALL_BADGES.length) lines.push("Hai tutti e 5 i Sigilli! Sei il CAMPIONE DELL'EMILIA! Il Dottor Balanzone lo racconterà a tutti. Per anni. Ogni giorno.");
+        if (total === ALL_BADGES.length) lines.push(`Hai tutti e ${ALL_BADGES.length} i Sigilli! Sei il CAMPIONE DELL'EMILIA! Il Dottor Balanzone lo racconterà a tutti. Per anni. Ogni giorno.`);
       }
       after = { speaker: npc.name, lines };
     } else if (r.outcome === "lose") {
-      after = { speaker: "...", lines: ["Ti risvegli dove hai mangiato l'ultima volta. Hai perso metà dei soldi, ma la squadra è rimessa a nuovo."] };
+      after = { speaker: "...", lines: ["Ti risvegli dove hai mangiato l'ultima volta. Hai perso un quarto dei soldi, ma la squadra è rimessa a nuovo."] };
     } else if (r.caught) {
       after = { speaker: "Vasetto", lines: [`${monName(r.caught)} è stato registrato nel Mostrario!${save.party.length >= 6 ? " La squadra è piena: è finito in Cantina." : ""}`] };
     }
+    if (r.outcome === "win" && !npc) setToast(`+${wildPay} €`);
     setBattle(null);
     if (after) say(after.speaker, after.lines);
     setTimeout(flush, 100);
@@ -169,8 +198,20 @@ export default function GameScreen() {
       return;
     }
     hap("success");
-    setSave((p) => ({ ...p, money: p.money - price, items: { ...p.items, [id]: p.items[id] + 1 } }));
+    setSave((p) => ({ ...p, money: p.money - price, items: { ...p.items, [id]: (p.items[id] ?? 0) + 1 } }));
+    setTimeout(flush, 300);
   };
+
+  function advanceDialog() {
+    if (!dialog) return;
+    hap("selection");
+    if (dialog.idx < dialog.lines.length - 1) setDialog({ ...dialog, idx: dialog.idx + 1 });
+    else {
+      const done = dialog.onDone;
+      setDialog(null);
+      done?.();
+    }
+  }
 
   const onLayout = (e: LayoutChangeEvent) => setArea({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height });
   const size = area.w ? Math.floor(area.w / COLS) : 0;
@@ -182,7 +223,7 @@ export default function GameScreen() {
       <View style={[styles.top, { paddingTop: insets.top + 8 }]}>
         <View style={{ flex: 1 }}>
           <PixelText style={styles.town} testID="game-town-name">{map.name}</PixelText>
-          <PixelText style={styles.meta} testID="game-money">{save.money} € · Sigilli {save.badges.length}/5</PixelText>
+          <PixelText style={styles.meta} testID="game-money">{save.money} € · Sigilli {save.badges.length}/{ALL_BADGES.length}</PixelText>
         </View>
         <View style={styles.leadBox} testID="game-lead-info">
           <PixelText style={styles.leadName} numberOfLines={1}>{monName(lead)} Lv{lead.lv}</PixelText>
@@ -205,15 +246,7 @@ export default function GameScreen() {
           <Pressable
             testID="dialog-box"
             style={styles.dialog}
-            onPress={() => {
-              hap("selection");
-              if (dialog.idx < dialog.lines.length - 1) setDialog({ ...dialog, idx: dialog.idx + 1 });
-              else {
-                const done = dialog.onDone;
-                setDialog(null);
-                done?.();
-              }
-            }}
+            onPress={advanceDialog}
           >
             <PixelText style={styles.speaker}>{dialog.speaker}</PixelText>
             <PixelText style={styles.dialogTxt} testID="dialog-text">{dialog.lines[dialog.idx]}</PixelText>
@@ -237,7 +270,7 @@ export default function GameScreen() {
             <Pressable testID="btn-b-menu" onPress={() => { hap("selection"); if (!busyRef.current) setMenu(true); }} style={({ pressed }) => [styles.round, styles.bBtn, pressed && styles.pressed]}>
               <PixelText style={styles.abTxt}>B</PixelText>
             </Pressable>
-            <Pressable testID="btn-a-interact" onPress={dialog ? undefined : interact} style={({ pressed }) => [styles.round, styles.aBtn, pressed && styles.pressed]}>
+            <Pressable testID="btn-a-interact" onPress={dialog ? advanceDialog : interact} style={({ pressed }) => [styles.round, styles.aBtn, pressed && styles.pressed]}>
               <PixelText style={styles.abTxt}>A</PixelText>
             </Pressable>
           </View>
@@ -245,7 +278,8 @@ export default function GameScreen() {
         </View>
       </View>
 
-      {battle && <Battle setup={battle} party={save.party} vasetti={save.items.vasetto} onEnd={onBattleEnd} />}
+      {flash && <Animated.View entering={FadeIn.duration(120)} exiting={FadeOut.duration(200)} style={styles.flash} pointerEvents="none" testID="encounter-flash" />}
+      {battle && <Battle setup={battle} party={save.party} items={save.items} onEnd={onBattleEnd} />}
 
       <Modal visible={menu} transparent animationType="fade" onRequestClose={() => setMenu(false)}>
         <Pressable style={styles.scrim} onPress={() => setMenu(false)} testID="menu-scrim">
@@ -253,9 +287,10 @@ export default function GameScreen() {
             <PixelText style={styles.sheetTitle}>MENU · {save.name}</PixelText>
             <MenuItem icon="account-group" label="Squadra" testID="menu-team" onPress={() => { setMenu(false); router.push("/team"); }} />
             <MenuItem icon="book-open-variant" label="Mostrario" testID="menu-mostrario" onPress={() => { setMenu(false); router.push("/mostrario"); }} />
-            <MenuItem icon="bag-personal" label={`Zaino: ${save.items.vasetto} vasetti · ${save.items.brodino} brodini`} testID="menu-bag" onPress={() => { setMenu(false); router.push("/team"); }} />
+            <MenuItem icon="bag-personal" label={`Zaino: ${save.items.vasetto ?? 0} vasetti · ${save.items.brodino ?? 0} brodini · ${save.items.tortellini ?? 0} tortellini · ${save.items.caffe ?? 0} caffè`} testID="menu-bag" onPress={() => { setMenu(false); router.push("/team"); }} />
             <MenuItem icon="medal" label={`Sigilli: ${save.badges.length ? save.badges.join(", ") : "nessuno"}`} testID="menu-badges" onPress={() => {}} />
             <MenuItem icon="content-save" label={sync === "saving" ? "Salvataggio..." : sync === "error" ? "Salva (errore, riprova)" : "Salva ora"} testID="menu-save" onPress={async () => { await flush(); setToast("Partita salvata!"); setMenu(false); }} />
+            <MenuItem icon={muted ? "volume-off" : "volume-high"} label={muted ? "Audio: spento" : "Audio: acceso"} testID="menu-audio" onPress={() => { setMuted(!muted); setMutedState(!muted); }} />
             <MenuItem icon="home" label="Schermata iniziale" testID="menu-title" onPress={async () => { setMenu(false); await flush(); router.dismissTo("/"); }} />
           </Animated.View>
         </Pressable>
@@ -268,7 +303,7 @@ export default function GameScreen() {
             {(Object.keys(ITEMS) as ItemId[]).map((id) => (
               <View key={id} style={styles.shopRow}>
                 <View style={{ flex: 1 }}>
-                  <PixelText>{ITEMS[id].name} ({save.items[id]})</PixelText>
+                  <PixelText>{ITEMS[id].name} ({save.items[id] ?? 0})</PixelText>
                   <PixelText style={styles.meta}>{ITEMS[id].desc}</PixelText>
                 </View>
                 <RetroButton small variant="secondary" testID={`shop-buy-${id}`} label={`${ITEMS[id].price}€`} onPress={() => buy(id)} />
@@ -303,6 +338,7 @@ function MenuItem({ icon, label, onPress, testID }: { icon: any; label: string; 
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surface },
+  flash: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.onSurface },
   top: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingBottom: 8, gap: 12, borderBottomWidth: 2, borderBottomColor: colors.border },
   town: { fontSize: 18, color: colors.brandSecondary },
   meta: { fontSize: 11, color: colors.muted, marginTop: 2 },

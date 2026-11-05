@@ -1,4 +1,4 @@
-import { EFF, MAPS, MOVES, SPECIES } from "./data";
+import { EFF, ITEMS, ItemId, MAPS, MOVES, SPECIES } from "./data";
 
 export type Mon = { uid: string; s: string; lv: number; xp: number; hp: number };
 
@@ -61,6 +61,15 @@ export function gainXp(m: Mon, amount: number): string[] {
     out.push(`${monName(m)} sale al livello ${m.lv}!`);
     for (const mv of knownMoves(m)) if (!before.includes(mv)) out.push(`${monName(m)} impara ${MOVES[mv].name}!`);
   }
+  const evo = SPECIES[m.s].evo;
+  if (evo && m.lv >= evo.lv) {
+    const oldName = monName(m);
+    const oldMax = stats(m).hp;
+    out.push(`Cosa? ${oldName} si sta evolvendo!`);
+    m.s = evo.to;
+    m.hp = Math.min(stats(m).hp, m.hp + (stats(m).hp - oldMax));
+    out.push(`Incredibile! ${oldName} è diventato ${monName(m)}!`);
+  }
   return out;
 }
 
@@ -82,4 +91,23 @@ export function rollWild(mapId: string): Mon {
   }
   const [s, min] = table[0];
   return makeMon(s, min);
+}
+
+// Mutates m when the item can be used; returns { ok, msg }.
+export function applyItem(m: Mon, id: ItemId): { ok: boolean; msg: string } {
+  const it = ITEMS[id];
+  const max = stats(m).hp;
+  if (it.kind === "heal") {
+    if (m.hp <= 0) return { ok: false, msg: `${monName(m)} è esausto: serve un Caffè Ristretto o un'osteria.` };
+    if (m.hp >= max) return { ok: false, msg: `${monName(m)} è già sazio.` };
+    const before = m.hp;
+    m.hp = Math.min(max, m.hp + it.amount);
+    return { ok: true, msg: `${monName(m)} mangia ${it.name} e recupera ${m.hp - before} PV!` };
+  }
+  if (it.kind === "revive") {
+    if (m.hp > 0) return { ok: false, msg: `${monName(m)} è già sveglio, non esagerare col caffè.` };
+    m.hp = Math.floor(max * it.amount);
+    return { ok: true, msg: `${monName(m)} beve il Caffè Ristretto e riprende i sensi!` };
+  }
+  return { ok: false, msg: "Non si può usare qui." };
 }

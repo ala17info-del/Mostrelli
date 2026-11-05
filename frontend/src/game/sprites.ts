@@ -72,6 +72,61 @@ export const SPRITES: Record<string, string[]> = {
     "kkkkkkkkkkkk", "krrorrrorrok", "kwnorrrownok", "krrorrrorrok", "kkkkkkkkkkkk", "ko..o..o..ok",
     "ko..o..o..ok", "ko..o..o..ok", "kooooooooook", ".kok....kok.", ".kok....kok.", ".kkk....kkk.",
   ],
+  // --- Evolutions (16x16)
+  tortellone: [
+    "................", "......kkkk......", "....kkyyyykk....", "...kyyyooyyyk...", "..kyyokkkkoyyk..", ".kyyk......kyyk.",
+    ".kyk........kyk.", "kyyk.kk..kk.kyyk", "kyykkwnkknwkkyyk", "kyyyyyyyyyyyyyyk", "kyyyykkkkkkyyyyk", ".kyyyyrrrryyyyk.",
+    ".kyyrrrrrrrryyk.", "..kkyyyyyyyykk..", "...kkkkkkkkkk...", "................",
+  ],
+  fangone: [
+    "................", "..kkk......kkk..", ".kwnnk....kwnnk.", ".kwwtkkkkkktwwk.", "kttttttttttttttk", "kttetttttttttetk",
+    "kteeettttttteeek", "kttttttttttttttk", "kttkkkkkkkkkkttk", "kttkrrrrrrrrkttk", ".kttkkkkkkkkttk.", "..kttttttttttk..",
+    ".kttttk..kttttk.", "kttttk....kttttk", "kkkkk......kkkkk", "................",
+  ],
+  vendemmione: [
+    ".......gg.......", "......gGGg......", ".......kB.......", "..gg..kmmk..gg..", ".gGgkmmmmmmkgGg.", "..gkmmwmmwmmkg..",
+    "...kmmnmmnmmk...", "..kmmmmmmmmmmk..", "..kmmmrrrrmmmk..", "...kmmmmmmmmk...", "...kmmmmmmmmk...", "....kmmmmmmk....",
+    ".....kmmmmk.....", "......kmmk......", ".......kk.......", "................",
+  ],
+  umarellone: [
+    "....kkkkkkkk....", "...kSSSSSSSSk...", "..kkkkkkkkkkkk..", "....khhhhhhk....", "....kwkhhkwk....", "....khhhhhhk....",
+    "....khkkkkhk....", ".....kcccck.....", "...kbbbbbbbbk...", "..kbbbbbbbbbbk..", "..kbbbkbbkbbbk..", "..kbbbbbbbbbbkB.",
+    "...kbbbbbbbbk.B.", "...kSSk..kSSk.B.", "...kSSk..kSSk.B.", "...kkkk..kkkk.k.",
+  ],
+  cinghialone: [
+    "................", ".kkk........kkk.", "kBBBk......kBBBk", "kBBBBkkkkkkBBBBk", "kBBBBBBBBBBBBBBk", "kBBwnBBBBBBwnBBk",
+    "kBBBBBBBBBBBBBBk", "kBBBBBbbbbBBBBBk", "kBwBBbkbbkbBBwBk", "kBwBBbbbbbbBBwBk", ".kBBBBbbbbBBBBk.", "..kBBBBBBBBBBk..",
+    ".kBBBk....kBBBk.", ".kBBBk....kBBBk.", ".kkkkk....kkkkk.", "................",
+  ],
+  // --- Riviera
+  gabbianone: [
+    "............", "....kkkk....", "...kwwwwk...", "..kwnwwwyyk.", "..kwwwwwkk..", ".kwwwwwwk...",
+    "kSwwwwwwwk..", "kSSwwwwwwwk.", ".kSSwwwwwwk.", "..kkwwwwkk..", "....kyky....", "....k..k....",
+  ],
+  vongolino: [
+    "............", "............", "...kkkkkk...", "..keeeeeek..", ".keoeoeoeek.", "keeoeoeoeeek",
+    "kkkkkkkkkkkk", "kpwnppppnwpk", ".kpppPPpppk.", "..kkkkkkkk..", "............", "............",
+  ],
+  medusella: [
+    "....kkkk....", "..kkppppkk..", ".kppwpppppk.", ".kpwnppnppk.", "kppppppppppk", "kPPPPPPPPPPk",
+    ".kkkkkkkkkk.", ".p.P.p.P.p..", ".P.p.P.p.P..", "..p.P.p.P.p.", "..P.p.P.p...", "...p...p....",
+  ],
+  discotecco: [
+    "....k..k....", ".....kk.....", "...kkkkkk...", "..kswswswk..", ".kswswswswk.", ".knnnnnnnnk.",
+    ".knwnkknwnk.", ".kswswswswk.", "..kswswswk..", "...kkkkkk...", "..ky....yk..", ".kk......kk.",
+  ],
+  ombrellone: [
+    ".....kk.....", "...kkrrkk...", "..krwrwrwk..", ".krwnrwnrwk.", "krwrwrwrwrwk", "krrwkkkkwrrk",
+    "kkkkkkkkkkkk", ".....kb.....", ".....kb.....", ".....kb.....", "....kyyk....", "...kyyyyk...",
+  ],
+  person_back: [
+    "...kkkkkk...", "..kAAAAAAk..", ".kAAAAAAAAk.", "..kBBBBBBk..", "..kBBBBBBk..", "..kkBBBBkk..",
+    "..kkCCCCkk..", ".khCCCCCChk.", ".khCCCCCChk.", "..kSSSSSSk..", "..kSk..kSk..", "..kkk..kkk..",
+  ],
+  person_walk: [
+    "...kkkkkk...", "..kAAAAAAk..", ".kAAAAAAAAk.", "..khhhhhhk..", "..khnhhnhk..", "..khhhhhhk..",
+    "..kkCCCCkk..", ".khCCCCCChk.", ".khCCCCCChk.", "..kSSSSSSk..", ".kSk...kSk..", ".kkk....kkk.",
+  ],
   person: [
     "...kkkkkk...", "..kAAAAAAk..", ".kAAAAAAAAk.", "..khhhhhhk..", "..khnhhnhk..", "..khhhhhhk..",
     "..kkCCCCkk..", ".khCCCCCChk.", ".khCCCCCChk.", "..kSSSSSSk..", "..kSk..kSk..", "..kkk..kkk..",

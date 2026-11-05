@@ -18,5 +18,22 @@ Map adventure with turn-based battles · modern colourful pixel art · strong sa
 - Team screen (Brodino healing item, set lead, Cantina storage box) and Mostrario with filters.
 
 ## Backlog
+
+## Iteration 2 (2026-06)
+- 5 evolutions (Tortellone, Fangone, Vendemmione, Umarellone, Cinghialone).
+- Zaino (bag) in battle with 4 items: Vasetto, Brodino, Tortellini, Caffè.
+- Original chiptune music and sound effects (expo-audio), with an audio on/off toggle.
+- New Riviera Romagnola map: 5 monsters, 3 trainers, a healer, a shop and boss Romeo, who gives the 6th Sigillo.
+- Shaded sprites and detailed, animated tiles.
+
+## Iteration 3 (2026-06)
+- Lower prices. Trainer rewards doubled, wild wins now pay money, and losing costs 25% of money instead of 50%.
+- CURA and MARKET markers above healers and shops on the map.
+- Trainer markers (crossed swords, crown for bosses) that turn into a check mark once beaten.
+- Battle effects: particles, damage numbers, lunges, blinking, screen shake, flash and animated HP bars.
+- Sprites drawn at double resolution with smaller pixels, plus finer tile detail.
+- New trainer Tonello at Osteria Grande.
+- Fixes: evolved monsters added to the Mostrario, A button advances dialogs, faster saving, no 401 error on startup.
+
 - P1: use items during battle, monster evolutions, sound and music
 - P2: trade or battle with friends, more areas (the Romagna coast, the Apennines), daily events

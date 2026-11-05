@@ -1,33 +1,64 @@
-import React, { useRef, useState } from "react";
+import { LinearGradient } from "expo-linear-gradient";
+import React, { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import Animated, { FadeIn, SlideInDown } from "react-native-reanimated";
+import Animated, { FadeIn, SlideInDown, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { colors, FONT } from "@/src/theme";
 
-import { MOVES, SPECIES, TYPES } from "./data";
-import { attack, catchChance, gainXp, knownMoves, Mon, monName, stats, xpReward } from "./engine";
+import { sfx, SfxName } from "./audio";
+import { ITEMS, ItemId, MOVES, SPECIES, TypeId, TYPES } from "./data";
+import { HitFx } from "./BattleFx";
+import { applyItem, attack, catchChance, gainXp, knownMoves, Mon, monName, stats, xpReward } from "./engine";
 import { PixelSprite } from "./PixelSprite";
 import { hap, HpBar, PixelText } from "./ui";
 
-export type BattleSetup = { kind: "wild" | "trainer"; enemies: Mon[]; trainerName?: string };
+export type BattleSetup = { kind: "wild" | "trainer"; enemies: Mon[]; trainerName?: string; field?: "grass" | "beach" };
 export type BattleResult = {
   outcome: "win" | "lose" | "flee" | "caught";
   party: Mon[];
   caught?: Mon;
   seen: string[];
-  vasettiUsed: number;
+  itemsUsed: Partial<Record<ItemId, number>>;
 };
 
-type Step = { text: string; php: number; ehp: number };
-type Phase = "msg" | "menu" | "moves" | "switch" | "forceSwitch";
+function sfxFor(text: string): SfxName | null {
+  if (/ usa /.test(text)) return "hit";
+  if (/si sta evolvendo|è diventato/.test(text)) return "evolve";
+  if (/sale al livello/.test(text)) return "levelup";
+  if (/^Preso!/.test(text)) return "catch";
+  if (/uscito dal vasetto/.test(text)) return "fail";
+  if (/recupera|riprende i sensi/.test(text)) return "heal";
+  return null;
+}
 
-export function Battle({ setup, party: initialParty, vasetti, onEnd }: { setup: BattleSetup; party: Mon[]; vasetti: number; onEnd: (r: BattleResult) => void }) {
+type Fx = { target: "foe" | "me"; type: TypeId; dmg: number; crit: boolean; eff: number };
+type Step = { text: string; php: number; ehp: number; fx?: Fx };
+type Phase = "msg" | "menu" | "moves" | "switch" | "forceSwitch" | "bag" | "itemTarget";
+
+export function Battle({ setup, party: initialParty, items, onEnd }: { setup: BattleSetup; party: Mon[]; items: Partial<Record<ItemId, number>>; onEnd: (r: BattleResult) => void }) {
   const insets = useSafeAreaInsets();
   const P = useRef<Mon[]>(initialParty.map((m) => ({ ...m })));
   const E = useRef<Mon[]>(setup.enemies.map((m) => ({ ...m })));
   const seen = useRef<string[]>([setup.enemies[0].s]);
-  const used = useRef(0);
+  const used = useRef<Partial<Record<ItemId, number>>>({});
+  const left = (id: ItemId) => (items[id] ?? 0) - (used.current[id] ?? 0);
+  const [pending, setPending] = useState<ItemId | null>(null);
+  const shake = useSharedValue(0);
+  const bob = useSharedValue(0);
+  useEffect(() => {
+    bob.value = withRepeat(withTiming(1, { duration: 700 }), -1, true);
+  }, [bob]);
+  const sceneStyle = useAnimatedStyle(() => ({ transform: [{ translateX: shake.value }] }));
+  const foeX = useSharedValue(0);
+  const meX = useSharedValue(0);
+  const foeO = useSharedValue(1);
+  const meO = useSharedValue(1);
+  const flashO = useSharedValue(0);
+  const [fxShow, setFxShow] = useState<(Fx & { k: number }) | null>(null);
+  const bobFoe = useAnimatedStyle(() => ({ opacity: foeO.value, transform: [{ translateY: bob.value * -4 }, { translateX: foeX.value }, { translateY: -Math.abs(foeX.value) * 0.6 }] }));
+  const bobMe = useAnimatedStyle(() => ({ opacity: meO.value, transform: [{ translateY: (1 - bob.value) * -4 }, { translateX: meX.value }, { translateY: -Math.abs(meX.value) * 0.6 }] }));
+  const flashStyle = useAnimatedStyle(() => ({ opacity: flashO.value }));
   const [act, setAct] = useState(() => Math.max(0, P.current.findIndex((m) => m.hp > 0)));
   const [ei, setEi] = useState(0);
   const [phase, setPhase] = useState<Phase>("msg");
@@ -50,7 +81,7 @@ export function Battle({ setup, party: initialParty, vasetti, onEnd }: { setup: 
   const ehp = showing ? showing.ehp : foe.hp;
 
   const finish = (outcome: BattleResult["outcome"], caught?: Mon) =>
-    onEnd({ outcome, party: P.current, caught, seen: seen.current, vasettiUsed: used.current });
+    onEnd({ outcome, party: P.current, caught, seen: seen.current, itemsUsed: used.current });
 
   const play = (list: Step[], then: () => void) => {
     setSteps(list);
@@ -58,6 +89,25 @@ export function Battle({ setup, party: initialParty, vasetti, onEnd }: { setup: 
     setPhase("msg");
     afterMsgs.current = then;
   };
+
+  const cur = phase === "msg" ? steps[si]?.text : null;
+  const curFx = phase === "msg" ? steps[si]?.fx : undefined;
+  useEffect(() => {
+    if (!cur) return;
+    const k = sfxFor(cur);
+    if (k) sfx(k);
+    if (/superefficace|Colpo critico/.test(cur)) {
+      flashO.value = withSequence(withTiming(0.55, { duration: 60 }), withTiming(0, { duration: 260 }));
+      shake.value = withSequence(withTiming(-14, { duration: 40 }), withTiming(14, { duration: 40 }), withTiming(-8, { duration: 40 }), withTiming(8, { duration: 40 }), withTiming(0, { duration: 40 }));
+    }
+    if (!curFx) return;
+    const lungeAtt = curFx.target === "foe" ? meX : foeX;
+    const blink = curFx.target === "foe" ? foeO : meO;
+    lungeAtt.value = withSequence(withTiming(curFx.target === "foe" ? 28 : -28, { duration: 90 }), withTiming(0, { duration: 180 }));
+    blink.value = withSequence(withTiming(1, { duration: 110 }), withTiming(0.1, { duration: 60 }), withTiming(1, { duration: 60 }), withTiming(0.1, { duration: 60 }), withTiming(1, { duration: 60 }));
+    shake.value = withSequence(withTiming(-6, { duration: 50 }), withTiming(6, { duration: 50 }), withTiming(0, { duration: 50 }));
+    setFxShow({ ...curFx, k: Date.now() });
+  }, [cur, si, curFx, shake, flashO, meX, foeX, foeO, meO]);
 
   const advance = () => {
     hap("selection");
@@ -67,6 +117,22 @@ export function Battle({ setup, party: initialParty, vasetti, onEnd }: { setup: 
 
   // Build steps of one attack while tracking HP snapshots.
   const snap = (list: Step[], text: string, a = act, e = ei) => list.push({ text, php: P.current[a].hp, ehp: E.current[e].hp });
+
+  const hit = (list: Step[], att: Mon, def: Mon, mv: string, target: "foe" | "me", a: number, prefix = "") => {
+    const before = def.hp;
+    const lines = attack(att, def, mv, prefix);
+    const dmg = before - def.hp;
+    lines.forEach((t, i) => {
+      snap(list, t, a);
+      if (i === 0 && dmg > 0) {
+        list[list.length - 1].fx = {
+          target, type: MOVES[mv].type, dmg,
+          crit: lines.includes("Colpo critico!"),
+          eff: lines.includes("È superefficace!") ? 2 : lines.includes("Non è molto efficace...") ? 0.5 : 1,
+        };
+      }
+    });
+  };
 
   const resolve = (list: Step[], a: number, e: number) => {
     const foeNow = E.current[e];
@@ -104,7 +170,7 @@ export function Battle({ setup, party: initialParty, vasetti, onEnd }: { setup: 
     const foeNow = E.current[ei];
     const moves = knownMoves(foeNow);
     const mv = moves[Math.floor(Math.random() * moves.length)];
-    for (const t of attack(foeNow, P.current[a], mv, setup.kind === "wild" ? "Selvatico · " : "Nemico · ")) snap(list, t, a);
+    hit(list, foeNow, P.current[a], mv, "me", a, setup.kind === "wild" ? "Selvatico · " : "Nemico · ");
   };
 
   const doMove = (mv: string) => {
@@ -112,11 +178,11 @@ export function Battle({ setup, party: initialParty, vasetti, onEnd }: { setup: 
     const list: Step[] = [];
     const meFirst = stats(me).spd >= stats(foe).spd;
     if (meFirst) {
-      for (const t of attack(me, foe, mv)) snap(list, t);
+      hit(list, me, foe, mv, "foe", act);
       if (foe.hp > 0) enemyTurn(list, act);
     } else {
       enemyTurn(list, act);
-      if (me.hp > 0) for (const t of attack(me, foe, mv)) snap(list, t);
+      if (me.hp > 0) hit(list, me, foe, mv, "foe", act);
     }
     resolve(list, act, ei);
   };
@@ -127,11 +193,11 @@ export function Battle({ setup, party: initialParty, vasetti, onEnd }: { setup: 
       play([{ text: "Non si rubano i mostri degli altri! Qui siamo gente onesta (quasi).", php: me.hp, ehp: foe.hp }], () => setPhase("menu"));
       return;
     }
-    if (vasetti - used.current <= 0) {
+    if (left("vasetto") <= 0) {
       play([{ text: "Non hai più Vasetti di Vetro! Passa in bottega.", php: me.hp, ehp: foe.hp }], () => setPhase("menu"));
       return;
     }
-    used.current += 1;
+    used.current.vasetto = (used.current.vasetto ?? 0) + 1;
     snap(list, "Lanci un Vasetto di Vetro...");
     if (Math.random() < catchChance(foe)) {
       hap("success");
@@ -161,6 +227,29 @@ export function Battle({ setup, party: initialParty, vasetti, onEnd }: { setup: 
     resolve(list, act, ei);
   };
 
+  const pickItem = (id: ItemId) => {
+    hap("selection");
+    if (left(id) <= 0) return;
+    if (id === "vasetto") return tryCatch();
+    setPending(id);
+    setPhase("itemTarget");
+  };
+
+  const applyOn = (i: number) => {
+    if (!pending) return;
+    const r = applyItem(P.current[i], pending);
+    if (!r.ok) {
+      play([{ text: r.msg, php: me.hp, ehp: foe.hp }], () => setPhase("bag"));
+      return;
+    }
+    used.current[pending] = (used.current[pending] ?? 0) + 1;
+    const list: Step[] = [];
+    snap(list, `Usi ${ITEMS[pending].name}! ${r.msg}`);
+    setPending(null);
+    enemyTurn(list, act);
+    resolve(list, act, ei);
+  };
+
   const switchTo = (i: number, forced: boolean) => {
     hap("selection");
     setAct(i);
@@ -176,7 +265,11 @@ export function Battle({ setup, party: initialParty, vasetti, onEnd }: { setup: 
 
   return (
     <Animated.View entering={FadeIn.duration(250)} style={[styles.root, { paddingTop: insets.top + 8 }]} testID="battle-screen">
-      <View style={styles.scene}>
+      <Animated.View style={[styles.scene, sceneStyle]}>
+        <LinearGradient
+          colors={setup.field === "beach" ? ["#7fc8e0", "#bfe6ef", "#f0d9a0"] : ["#9fd0a0", "#5f9a4e", "#2f5d34"]}
+          style={StyleSheet.absoluteFill}
+        />
         <View style={styles.foeRow}>
           <View style={styles.infoBox} testID="battle-enemy-info">
             <PixelText style={styles.monName} numberOfLines={1}>{monName(foe)}</PixelText>
@@ -184,14 +277,20 @@ export function Battle({ setup, party: initialParty, vasetti, onEnd }: { setup: 
             <HpBar hp={ehp} max={foeMax} testID="battle-enemy-hp" />
           </View>
           <View style={styles.spriteWrap}>
-            <View style={styles.ground} />
-            <PixelSprite name={foe.s} size={112} testID="battle-enemy-sprite" />
+            <View style={[styles.ground, setup.field === "beach" && styles.groundBeach]} />
+            <Animated.View style={bobFoe}>
+              <PixelSprite name={foe.s} size={112} testID="battle-enemy-sprite" />
+            </Animated.View>
+            {fxShow?.target === "foe" && <HitFx key={fxShow.k} type={fxShow.type} dmg={fxShow.dmg} crit={fxShow.crit} eff={fxShow.eff} />}
           </View>
         </View>
         <View style={styles.meRow}>
           <View style={styles.spriteWrap}>
-            <View style={styles.ground} />
-            <PixelSprite name={me.s} size={120} flip testID="battle-player-sprite" />
+            <View style={[styles.ground, setup.field === "beach" && styles.groundBeach]} />
+            <Animated.View style={bobMe}>
+              <PixelSprite name={me.s} size={120} flip testID="battle-player-sprite" />
+            </Animated.View>
+            {fxShow?.target === "me" && <HitFx key={fxShow.k} type={fxShow.type} dmg={fxShow.dmg} crit={fxShow.crit} eff={fxShow.eff} />}
           </View>
           <View style={styles.infoBox} testID="battle-player-info">
             <PixelText style={styles.monName} numberOfLines={1}>{monName(me)}</PixelText>
@@ -200,7 +299,8 @@ export function Battle({ setup, party: initialParty, vasetti, onEnd }: { setup: 
             <PixelText style={styles.hpText} testID="battle-player-hp-text">{php}/{meMax} PV</PixelText>
           </View>
         </View>
-      </View>
+        <Animated.View pointerEvents="none" style={[styles.flash, flashStyle]} />
+      </Animated.View>
 
       <View style={[styles.panel, { paddingBottom: insets.bottom + 12 }]}>
         {phase === "msg" && showing && (
@@ -214,7 +314,7 @@ export function Battle({ setup, party: initialParty, vasetti, onEnd }: { setup: 
             <PixelText style={styles.prompt}>Cosa deve fare {monName(me)}?</PixelText>
             <View style={styles.grid}>
               <Cmd label="Lotta" color={colors.brandPrimary} fg={colors.onBrandPrimary} testID="battle-cmd-fight" onPress={() => setPhase("moves")} />
-              <Cmd label={`Cattura (${vasetti - used.current})`} color={colors.brandSecondary} fg={colors.onBrandSecondary} testID="battle-cmd-catch" onPress={tryCatch} />
+              <Cmd label="Zaino" color={colors.brandSecondary} fg={colors.onBrandSecondary} testID="battle-cmd-bag" onPress={() => setPhase("bag")} />
               <Cmd label="Mostri" color={colors.brandTertiary} fg={colors.onBrandTertiary} testID="battle-cmd-switch" onPress={() => setPhase("switch")} />
               <Cmd label="Fuga" color={colors.surfaceTertiary} fg={colors.onSurface} testID="battle-cmd-flee" onPress={flee} />
             </View>
@@ -234,6 +334,42 @@ export function Battle({ setup, party: initialParty, vasetti, onEnd }: { setup: 
               })}
             </View>
             <Pressable testID="battle-moves-back" onPress={() => setPhase("menu")} style={styles.back}>
+              <PixelText style={styles.backTxt}>‹ Indietro</PixelText>
+            </Pressable>
+          </Animated.View>
+        )}
+        {phase === "bag" && (
+          <Animated.View entering={SlideInDown.duration(180)}>
+            <PixelText style={styles.prompt}>Zaino</PixelText>
+            <View style={styles.grid}>
+              {(Object.keys(ITEMS) as ItemId[]).map((id) => (
+                <Pressable key={id} testID={`battle-item-${id}`} disabled={left(id) <= 0} onPress={() => pickItem(id)} style={({ pressed }) => [styles.move, { borderLeftColor: colors.brandSecondary, opacity: left(id) <= 0 ? 0.4 : pressed ? 0.7 : 1 }]}>
+                  <PixelText style={styles.moveName} numberOfLines={2}>{ITEMS[id].name}</PixelText>
+                  <PixelText style={[styles.moveMeta, { color: colors.brandSecondary }]}>x{left(id)}</PixelText>
+                </Pressable>
+              ))}
+            </View>
+            <Pressable testID="battle-bag-back" onPress={() => setPhase("menu")} style={styles.back}>
+              <PixelText style={styles.backTxt}>‹ Indietro</PixelText>
+            </Pressable>
+          </Animated.View>
+        )}
+        {phase === "itemTarget" && pending && (
+          <Animated.View entering={SlideInDown.duration(180)} style={{ maxHeight: 260 }}>
+            <PixelText style={styles.prompt}>Su chi usi {ITEMS[pending].name}?</PixelText>
+            <ScrollView>
+              {P.current.map((m, i) => (
+                <Pressable key={m.uid} testID={`battle-item-target-${i}`} onPress={() => applyOn(i)} style={styles.swRow}>
+                  <PixelSprite name={m.s} size={36} />
+                  <View style={{ flex: 1 }}>
+                    <PixelText style={styles.moveName}>{monName(m)} Lv{m.lv}</PixelText>
+                    <HpBar hp={m.hp} max={stats(m).hp} />
+                  </View>
+                  <PixelText style={styles.lv}>{m.hp}/{stats(m).hp}</PixelText>
+                </Pressable>
+              ))}
+            </ScrollView>
+            <Pressable testID="battle-item-target-back" onPress={() => { setPending(null); setPhase("bag"); }} style={styles.back}>
               <PixelText style={styles.backTxt}>‹ Indietro</PixelText>
             </Pressable>
           </Animated.View>
@@ -288,7 +424,9 @@ function Cmd({ label, color, fg, onPress, testID }: { label: string; color: stri
 
 const styles = StyleSheet.create({
   root: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.surface },
-  scene: { flex: 1, justifyContent: "space-around", paddingHorizontal: 16, backgroundColor: "#2f5d34" },
+  scene: { flex: 1, justifyContent: "space-around", paddingHorizontal: 16, overflow: "hidden" },
+  groundBeach: { backgroundColor: "#d9bf86" },
+  flash: { ...StyleSheet.absoluteFillObject, backgroundColor: "#fff8e1" },
   foeRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   meRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   infoBox: { width: "48%", backgroundColor: colors.surfaceSecondary, borderWidth: 2, borderColor: colors.onSurface, padding: 8, gap: 4 },

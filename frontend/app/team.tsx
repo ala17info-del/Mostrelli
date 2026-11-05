@@ -4,8 +4,9 @@ import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { MOVES, SPECIES, TYPES } from "@/src/game/data";
-import { knownMoves, Mon, monName, stats } from "@/src/game/engine";
+import { sfx } from "@/src/game/audio";
+import { ITEMS, ItemId, MOVES, SPECIES, TYPES } from "@/src/game/data";
+import { applyItem, knownMoves, Mon, monName, stats } from "@/src/game/engine";
 import { useGame } from "@/src/game/GameContext";
 import { PixelSprite } from "@/src/game/PixelSprite";
 import { hap, HpBar, PixelText, RetroButton } from "@/src/game/ui";
@@ -14,23 +15,24 @@ import { colors } from "@/src/theme";
 export default function Team() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { save, setSave } = useGame();
+  const { save, setSave, flush } = useGame();
   const [msg, setMsg] = useState("");
   if (!save) return <Redirect href="/" />;
 
-  const brodino = (i: number) => {
-    const m = save.party[i];
-    const max = stats(m).hp;
-    if (save.items.brodino <= 0) return setMsg("Hai finito i brodini!");
-    if (m.hp <= 0) return setMsg(`${monName(m)} è esausto: serve un'osteria, non un brodino.`);
-    if (m.hp >= max) return setMsg(`${monName(m)} è già sazio.`);
+  const giveItem = (i: number, id: ItemId) => {
+    if ((save.items[id] ?? 0) <= 0) return setMsg(`Hai finito: ${ITEMS[id].name}. Passa in bottega!`);
+    const copy = { ...save.party[i] };
+    const r = applyItem(copy, id);
+    setMsg(r.msg);
+    if (!r.ok) return;
     hap("success");
+    sfx("heal");
     setSave((s) => ({
       ...s,
-      items: { ...s.items, brodino: s.items.brodino - 1 },
-      party: s.party.map((p, j) => (j === i ? { ...p, hp: Math.min(max, p.hp + 25) } : p)),
+      items: { ...s.items, [id]: (s.items[id] ?? 0) - 1 },
+      party: s.party.map((p, j) => (j === i ? copy : p)),
     }));
-    setMsg(`${monName(m)} beve il brodino. Che conforto!`);
+    setTimeout(flush, 300);
   };
   const lead = (i: number) => {
     hap("selection");
@@ -60,7 +62,7 @@ export default function Team() {
           <PixelText style={{ color: colors.brandSecondary }}>‹ Torna</PixelText>
         </Pressable>
         <PixelText style={styles.title}>SQUADRA</PixelText>
-        <PixelText style={styles.meta} testID="team-items">{save.items.vasetto} vasetti · {save.items.brodino} brodini · {save.money} €</PixelText>
+        <PixelText style={styles.meta} testID="team-items">{save.items.vasetto ?? 0} vasetti · {save.items.brodino ?? 0} brodini · {save.items.tortellini ?? 0} tortellini · {save.items.caffe ?? 0} caffè · {save.money} €</PixelText>
       </View>
       {!!msg && <PixelText testID="team-msg" style={styles.msg}>{msg}</PixelText>}
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 24, gap: 12 }}>
@@ -68,7 +70,16 @@ export default function Team() {
           <Animated.View key={m.uid} entering={FadeInDown.delay(i * 60)}>
             <MonCard m={m} i={i}>
               <View style={styles.actions}>
-                <RetroButton small variant="success" testID={`team-brodino-${i}`} label="Brodino" onPress={() => brodino(i)} style={{ flex: 1 }} />
+                {m.hp > 0 ? (
+                  <>
+                    <RetroButton small variant="success" testID={`team-brodino-${i}`} label={`Brodino ${save.items.brodino ?? 0}`} onPress={() => giveItem(i, "brodino")} style={{ flex: 1 }} />
+                    <RetroButton small variant="success" testID={`team-tortellini-${i}`} label={`Tortell. ${save.items.tortellini ?? 0}`} onPress={() => giveItem(i, "tortellini")} style={{ flex: 1 }} />
+                  </>
+                ) : (
+                  <RetroButton small variant="primary" testID={`team-caffe-${i}`} label={`Caffè ${save.items.caffe ?? 0}`} onPress={() => giveItem(i, "caffe")} style={{ flex: 1 }} />
+                )}
+              </View>
+              <View style={styles.actions}>
                 {i > 0 && <RetroButton small variant="secondary" testID={`team-lead-${i}`} label="In testa" onPress={() => lead(i)} style={{ flex: 1 }} />}
                 {save.party.length > 1 && <RetroButton small variant="ghost" testID={`team-tobox-${i}`} label="Cantina" onPress={() => toBox(i)} style={{ flex: 1 }} />}
               </View>
