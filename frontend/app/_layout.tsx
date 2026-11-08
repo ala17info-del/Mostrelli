@@ -10,6 +10,7 @@ import { AuthProvider } from "@/src/auth";
 import { ErrorBoundary } from "@/src/components/error-boundary";
 import { GameProvider } from "@/src/game/GameContext";
 import { queryClient } from "@/src/query-client";
+import "@/src/webNoSelect";
 import { colors } from "@/src/theme";
 
 LogBox.ignoreAllLogs(true);

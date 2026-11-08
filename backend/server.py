@@ -1,4 +1,5 @@
 import asyncio
+import secrets
 from contextlib import suppress
 from fastapi import FastAPI, APIRouter, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -215,6 +216,7 @@ SPECIES_IDS = {
     "pistonzo", "vaporella", "cinghialotto", "squacquerone", "piadinone", "passatellone", "portichino", "tortellone", "fangone",
     "vendemmione", "umarellone", "cinghialone", "gabbianone", "vongolino", "medusella", "discotecco", "ombrellone",
     "crescentino", "lambruschino", "canalino", "scooterone", "cappellaccio", "zuppone", "mortadellone", "squacquerona", "passatellaccio", "piadinazza", "zanzarazza", "turbonzo", "vaporiera", "tandemone", "crescentone", "gabbianazzo", "lambruscone", "zuppissima",
+    "balsamino", "balsamone", "prosciuttino", "prosciuttone", "parmigianino", "parmigione", "mosaichino", "mosaicone", "rossocorsa",
 }
 
 
@@ -272,11 +274,13 @@ async def duel_result(code: str, body: DuelResult, user: dict = Depends(current_
 class LiveIn(BaseModel):
     name: str = Field(min_length=1, max_length=20)
     party: list[dict[str, Any]] = Field(min_length=1, max_length=6)
+    mode: str = Field(default="pvp", pattern="^(pvp|coop|trade)$")
+    boss: Optional[str] = Field(default=None, pattern="^[a-z_]{2,30}$")
 
 
 class LiveAction(BaseModel):
     turn: int = Field(ge=0)
-    kind: str = Field(pattern="^(move|switch|item|forfeit)$")
+    kind: str = Field(pattern="^(move|switch|item|forfeit|pass)$")
     move: Optional[str] = Field(default=None, max_length=30)
     idx: Optional[int] = Field(default=None, ge=0, le=5)
     item: Optional[str] = Field(default=None, pattern="^(brodino|tortellini|digestivo|gelato|caffe)$")
@@ -300,7 +304,8 @@ def live_out(d: dict, uid: str) -> dict:
         "host": {"name": d["host_name"], "party": d["host_party"]},
         "guest": {"name": d.get("guest_name"), "party": d.get("guest_party")} if d.get("guest_id") else None,
         "log": d["log"], "my_action": d["actions"].get(side) is not None, "their_action": d["actions"].get(other) is not None,
-        "winner": d.get("winner"),
+        "winner": d.get("winner"), "mode": d.get("mode", "pvp"), "boss": d.get("boss"),
+        "offers": d.get("offers", {}), "confirms": d.get("confirms", {}), "trade_done": d.get("trade_done", False),
     }
 
 
@@ -315,7 +320,10 @@ async def live_doc(code: str, uid: str) -> dict:
 async def live_create(body: LiveIn, user: dict = Depends(current_user)):
     import secrets
     alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    if body.mode == "coop" and not body.boss:
+        raise HTTPException(status_code=422, detail="Scegli un avversario per la sfida in coppia")
     doc = {"host_id": str(user["_id"]), "host_name": body.name, "host_party": clean_party(body.party), "guest_id": None,
+           "mode": body.mode, "boss": body.boss if body.mode == "coop" else None, "offers": {}, "confirms": {},
            "status": "waiting", "turn": 0, "actions": {"host": None, "guest": None}, "log": [], "winner": None,
            "created_at": datetime.now(timezone.utc).isoformat(), "expires_at": datetime.now(timezone.utc) + timedelta(days=2)}
     for _ in range(10):
@@ -387,8 +395,83 @@ async def live_action(code: str, body: LiveAction, user: dict = Depends(current_
     return live_out(await live_doc(code, uid), uid)
 
 
+class TradeOffer(BaseModel):
+    uid: str = Field(min_length=1, max_length=40)
+
+
+def find_mon(state: dict, uid: str):
+    for where in ("party", "box"):
+        for i, m in enumerate(state.get(where) or []):
+            if m.get("uid") == uid:
+                return where, i, m
+    return None, -1, None
+
+
+async def trade_doc(code: str, uid: str) -> tuple[dict, str]:
+    d = await live_doc(code, uid)
+    if d.get("mode") != "trade":
+        raise HTTPException(status_code=400, detail="Questa stanza non è per gli scambi")
+    if d["status"] != "active":
+        raise HTTPException(status_code=409, detail="Lo scambio non è in corso")
+    return d, "host" if d["host_id"] == uid else "guest"
+
+
+@api_router.post("/live/{code}/offer")
+async def trade_offer(code: str, body: TradeOffer, user: dict = Depends(current_user)):
+    uid = str(user["_id"])
+    d, side = await trade_doc(code, uid)
+    sv = await db.saves.find_one({"user_id": uid}, {"state": 1}) or {}
+    state = sv.get("state") or {}
+    where, _, mon = find_mon(state, body.uid)
+    if not mon:
+        raise HTTPException(status_code=404, detail="Mostrello non trovato nel tuo salvataggio")
+    if where == "party" and len(state.get("party") or []) < 2:
+        raise HTTPException(status_code=422, detail="Non puoi scambiare il tuo unico Mostrello in squadra")
+    snap = {"uid": mon["uid"], "s": mon.get("s"), "lv": mon.get("lv"), "xp": mon.get("xp"), "hp": mon.get("hp")}
+    await db.live_duels.update_one({"code": d["code"]}, {"$set": {f"offers.{side}": snap, "confirms": {}}})
+    return live_out(await live_doc(code, uid), uid)
+
+
+@api_router.post("/live/{code}/confirm")
+async def trade_confirm(code: str, user: dict = Depends(current_user)):
+    uid = str(user["_id"])
+    d, side = await trade_doc(code, uid)
+    if not d.get("offers", {}).get("host") or not d.get("offers", {}).get("guest"):
+        raise HTTPException(status_code=409, detail="Servono le offerte di entrambi")
+    await db.live_duels.update_one({"code": d["code"]}, {"$set": {f"confirms.{side}": True}})
+    d = await db.live_duels.find_one({"code": d["code"]})
+    if d["confirms"].get("host") and d["confirms"].get("guest") and d["status"] == "active":
+        # Lock the room first so the swap can happen only once.
+        res = await db.live_duels.update_one({"code": d["code"], "status": "active"}, {"$set": {"status": "swapping"}})
+        if res.modified_count:
+            ids = {"host": d["host_id"], "guest": d["guest_id"]}
+            saves = {k: (await db.saves.find_one({"user_id": v}) or {}).get("state") or {} for k, v in ids.items()}
+            for k in ("host", "guest"):
+                where, i, mon = find_mon(saves[k], d["offers"][k]["uid"])
+                if not mon:
+                    await db.live_duels.update_one({"code": d["code"]}, {"$set": {"status": "active", "confirms": {}}})
+                    raise HTTPException(status_code=409, detail="Uno dei Mostrelli non è più disponibile")
+                saves[k][where].pop(i)
+            for k, o in (("host", "guest"), ("guest", "host")):
+                got = dict(next(m for m in [d["offers"][o]]))
+                got["uid"] = secrets.token_hex(4)
+                st = saves[k]
+                if len(st.get("party") or []) < 6:
+                    st.setdefault("party", []).append(got)
+                else:
+                    st.setdefault("box", []).append(got)
+                for f in ("caught", "seen"):
+                    if got["s"] not in (st.get(f) or []):
+                        st.setdefault(f, []).append(got["s"])
+            now = datetime.now(timezone.utc).isoformat()
+            for k, v in ids.items():
+                await db.saves.update_one({"user_id": v}, {"$set": {"state": saves[k], "updated_at": now}})
+            await db.live_duels.update_one({"code": d["code"]}, {"$set": {"status": "done", "trade_done": True}})
+    return live_out(await live_doc(code, uid), uid)
+
+
 class LiveEnd(BaseModel):
-    winner: str = Field(pattern="^(host|guest|draw)$")
+    winner: str = Field(pattern="^(host|guest|draw|boss)$")
 
 
 @api_router.post("/live/{code}/end")

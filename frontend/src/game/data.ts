@@ -1,4 +1,5 @@
 // All game content is original: creatures, places-as-maps, characters and texts.
+import { linkExpansion, X_BADGES, X_MAPS, X_MOVES, X_SPECIES } from "./expansion";
 export type TypeId = "sugo" | "campi" | "terme" | "motore" | "nebbia" | "chiacchiera";
 
 export const TYPES: Record<TypeId, { name: string; color: string }> = {
@@ -55,6 +56,7 @@ export const MOVES: Record<string, Move> = {
   pettegolezzo: { name: "Pettegolezzo di Paese", type: "chiacchiera", power: 50, acc: 100, fx: { k: "defDown", p: 50 } },
   nebbiafitta: { name: "Nebbia Fitta", type: "nebbia", power: 60, acc: 95, fx: { k: "selfDefUp", p: 30 } },
   ombra: { name: "Ombra di Prima Fila", type: "campi", power: 70, acc: 95, fx: { k: "selfDefUp", p: 40 } },
+  ...X_MOVES,
 };
 
 export type Species = {
@@ -110,6 +112,7 @@ export const SPECIES_LIST: Species[] = [
   sp({ id: "gabbianazzo", num: 0, name: "Gabbianazzo", type: "chiacchiera", hp: 80, atk: 93, def: 67, spd: 103, catchRate: 0.15, moves: [["sberla", 1], ["furto", 1], ["chiacchierata", 18], ["lamentela", 24]], desc: "Il terrore dei lidi. Ruba piadine, gelati e pure gli occhiali da sole." }),
   sp({ id: "lambruscone", num: 0, name: "Lambruscone", type: "terme", hp: 75, atk: 80, def: 72, spd: 83, catchRate: 0.15, moves: [["fango", 1], ["bollicine", 8], ["vapore", 14], ["onda", 22]], desc: "Fiasco di frizzante dei colli. Le sue bollicine stordiscono anche i più sobri." }),
   sp({ id: "zuppissima", num: 0, name: "Zuppissima", type: "chiacchiera", hp: 90, atk: 75, def: 82, spd: 58, catchRate: 0.15, moves: [["sberla", 1], ["pettegolezzo", 8], ["chiacchierata", 14], ["lamentela", 20]], desc: "Zuppa inglese a dieci strati con alchermes doppio. Sa i segreti di ogni paese." }),
+  ...X_SPECIES,
 ];
 SPECIES_LIST.forEach((x, i) => (x.num = i + 1));
 export const SPECIES: Record<string, Species> = Object.fromEntries(SPECIES_LIST.map((s) => [s.id, s]));
@@ -122,10 +125,11 @@ export const ITEMS = {
   digestivo: { name: "Digestivo della Casa", price: 10, kind: "cureConf", amount: 0, desc: "Cura la confusione. Solo in lotta. Fatto dallo zio, non chiedere cosa c'è dentro." },
   gelato: { name: "Gelato Artigianale", price: 10, kind: "cureBurn", amount: 0, desc: "Cura le scottature. Solo in lotta. Gusto crema, il più serio." },
   caffe: { name: "Caffè Ristretto", price: 25, kind: "revive", amount: 0.5, desc: "Risveglia un mostrello esausto con metà dei PV. Corretto, ovviamente." },
+  caramella: { name: "Caramella Rara", price: 0, kind: "level", amount: 1, desc: "Fa salire di un livello. Non si vende: si trova in giro o si vince." },
 } as const;
 export type ItemId = keyof typeof ITEMS;
 
-export const BLOCKING = new Set(["T", "W", "R", "H", "D", "B", "S", "O", "U"]);
+export const BLOCKING = new Set(["T", "W", "R", "H", "D", "B", "S", "O", "U", "X"]);
 export const ENCOUNTER_TILES = new Set(["G", "Q"]);
 
 export type Npc = {
@@ -137,6 +141,7 @@ export type Npc = {
   reward?: number;
   badge?: string;
   after?: string[];
+  prize?: [string, number];
 };
 
 export type GameMap = {
@@ -147,6 +152,7 @@ export type GameMap = {
   music?: string;
   npcs: Npc[];
   signs: Record<string, string>;
+  pickups?: { id: string; x: number; y: number; item: ItemId }[];
 };
 
 const L = (A: string, C: string) => ({ A, C });
@@ -302,7 +308,10 @@ export const MAPS: Record<string, GameMap> = {
   },
 };
 
-export const ALL_BADGES = ["Sigillo del Cantiere", "Sigillo della Via Emilia", "Sigillo delle Terme", "Sigillo del Rombo", "Sigillo Estense", "Sigillo dell'Ombrellone"];
+Object.assign(MAPS, X_MAPS);
+linkExpansion(MAPS);
+
+export const ALL_BADGES = ["Sigillo del Cantiere", "Sigillo della Via Emilia", "Sigillo delle Terme", "Sigillo del Rombo", "Sigillo Estense", "Sigillo dell'Ombrellone", ...X_BADGES];
 
 export const INTRO_LINES = [
   "Benvenuto! Io sono il Dottor Balanzone, luminare dell'Università più antica del mondo. Sì, lo ripeto spesso.",

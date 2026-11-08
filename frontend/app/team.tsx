@@ -80,6 +80,11 @@ export default function Team() {
                   <RetroButton small variant="primary" testID={`team-caffe-${i}`} label={`Caffè ${save.items.caffe ?? 0}`} onPress={() => giveItem(i, "caffe")} style={{ flex: 1 }} />
                 )}
               </View>
+              {(save.items.caramella ?? 0) > 0 && (
+                <View style={styles.actions}>
+                  <RetroButton small variant="secondary" testID={`team-caramella-${i}`} label={`Caramella Rara ${save.items.caramella}`} onPress={() => giveItem(i, "caramella")} style={{ flex: 1 }} />
+                </View>
+              )}
               <View style={styles.actions}>
                 {i > 0 && <RetroButton small variant="secondary" testID={`team-lead-${i}`} label="In testa" onPress={() => lead(i)} style={{ flex: 1 }} />}
                 {save.party.length > 1 && <RetroButton small variant="ghost" testID={`team-tobox-${i}`} label="Cantina" onPress={() => toBox(i)} style={{ flex: 1 }} />}

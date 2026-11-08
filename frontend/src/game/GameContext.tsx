@@ -22,6 +22,7 @@ export type Save = {
   defeated: string[];
   badges: string[];
   lastHeal: { map: string; x: number; y: number };
+  picked?: string[];
 };
 
 export function newSave(name: string, starter: string): Save {
@@ -88,6 +89,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   );
 
   const load = useCallback(() => {
+    if (timer.current) clearTimeout(timer.current);
     setLoading(true);
     setLoadError(false);
     api<{ state: Save | null }>("/save")

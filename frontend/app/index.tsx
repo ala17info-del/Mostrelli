@@ -1,4 +1,3 @@
-import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -9,10 +8,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/src/auth";
 import { useGame } from "@/src/game/GameContext";
 import { PixelSprite } from "@/src/game/PixelSprite";
+import { TitleScene } from "@/src/game/TitleScene";
 import { PixelText, RetroButton } from "@/src/game/ui";
 import { colors } from "@/src/theme";
 
-const BG = "https://images.unsplash.com/photo-1635469019177-7264fc1e013c?crop=entropy&cs=srgb&fm=jpg&q=85&w=1200";
 
 export default function Title() {
   const insets = useSafeAreaInsets();
@@ -24,13 +23,13 @@ export default function Title() {
 
   return (
     <View style={styles.root} testID="title-screen">
-      <Image source={{ uri: BG }} style={StyleSheet.absoluteFill} contentFit="cover" />
-      <LinearGradient colors={["rgba(18,18,18,0.35)", "rgba(18,18,18,0.85)", colors.surface]} style={StyleSheet.absoluteFill} />
+      <TitleScene />
+      <LinearGradient colors={["rgba(18,18,18,0.55)", "rgba(18,18,18,0.1)", "rgba(18,18,18,0.6)", colors.surface]} locations={[0, 0.35, 0.7, 1]} style={StyleSheet.absoluteFill} />
       <View style={[styles.content, { paddingTop: insets.top + 48 }]}>
         <Animated.View entering={FadeInUp.duration(500)}>
           <PixelText style={styles.kicker}>— EMILIA-ROMAGNA EDITION —</PixelText>
           <PixelText style={styles.title} testID="title-text">MOSTRELLI</PixelText>
-          <PixelText style={styles.sub}>Tortellini, nebbia e mostrelli selvatici tra Bologna, Castel Maggiore, Altedo, Ferrara, Osteria Grande, Castel San Pietro, Imola e la Riviera.</PixelText>
+          <PixelText style={styles.sub}>Colline, pianura, nebbia e Riviera: un'avventura di mostrelli golosi in tutta l'Emilia-Romagna.</PixelText>
         </Animated.View>
         <Animated.View entering={FadeInUp.delay(200).duration(500)} style={styles.sprites}>
           <PixelSprite name="tortellotto" size={72} />

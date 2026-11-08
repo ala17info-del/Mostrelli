@@ -1,21 +1,29 @@
-// Deterministic resolution of one live-duel turn. Both clients run the same code with the
+// Deterministic resolution of one live-room turn. Both clients run the same code with the
 // same seed from the server, so they reach the same result without the server knowing the rules.
+// pvp: host vs guest. coop: host + guest together against a trainer/boss team ("boss" side).
 import { ITEMS, ItemId, MOVES, TypeId } from "./data";
 import { applyItem, attack, knownMoves, Mon, monName, stageMult, stats } from "./engine";
 
-export type Side = "host" | "guest";
-export type LiveAct = { kind: "move" | "switch" | "item"; move?: string; idx?: number; item?: ItemId };
+export type Side = "host" | "guest" | "boss";
+export type LiveAct = { kind: "move" | "switch" | "item" | "pass"; move?: string; idx?: number; item?: ItemId };
 export type TurnEntry = { turn: number; host: LiveAct; guest: LiveAct; seed: number };
 type Cond = { atk: number; def: number; spd: number; conf: number; burn: boolean };
-export type DuelState = { P: Record<Side, Mon[]>; act: Record<Side, number>; cond: Record<string, Cond>; winner: Side | "draw" | null };
+export type DuelState = {
+  coop: boolean; P: Record<Side, Mon[]>; act: Record<Side, number>; out: Record<Side, boolean>;
+  cond: Record<string, Cond>; winner: Side | "draw" | null;
+};
 export type DLine = { text: string; hp: Record<Side, number>; act: Record<Side, number>; fx?: { target: Side; type: TypeId; dmg: number; crit: boolean; eff: number }; heal?: Side; used?: { side: Side; item: ItemId } };
 
 export const other = (s: Side): Side => (s === "host" ? "guest" : "host");
-const SIDES: Side[] = ["host", "guest"];
+type Player = "host" | "guest";
+const PLAYERS: Player[] = ["host", "guest"];
 
-export function initDuel(host: Mon[], guest: Mon[]): DuelState {
+export function initDuel(host: Mon[], guest: Mon[], boss?: Mon[]): DuelState {
   const full = (p: Mon[]) => p.map((m) => ({ ...m, hp: stats(m).hp }));
-  return { P: { host: full(host), guest: full(guest) }, act: { host: 0, guest: 0 }, cond: {}, winner: null };
+  return {
+    coop: !!boss, P: { host: full(host), guest: full(guest), boss: full(boss ?? []) },
+    act: { host: 0, guest: 0, boss: 0 }, out: { host: false, guest: false, boss: false }, cond: {}, winner: null,
+  };
 }
 
 function mulberry32(a: number) {
@@ -40,15 +48,19 @@ export function resolveTurn(st: DuelState, e: TurnEntry, names: Record<Side, str
 
 function run(st: DuelState, e: TurnEntry, names: Record<Side, string>): DLine[] {
   const out: DLine[] = [];
+  const fighters: Side[] = st.coop ? ["host", "guest", "boss"] : PLAYERS;
   const cur = (s: Side) => st.P[s][st.act[s]];
+  const hpOf = (s: Side) => cur(s)?.hp ?? 0;
   const cnd = (s: Side, m: Mon) => st.cond[`${s}:${m.uid}`] ?? (st.cond[`${s}:${m.uid}`] = { atk: 0, def: 0, spd: 0, conf: 0, burn: false });
   const clear = (s: Side) => delete st.cond[`${s}:${cur(s).uid}`];
-  const push = (text: string, extra: Partial<DLine> = {}) => out.push({ text, hp: { host: cur("host").hp, guest: cur("guest").hp }, act: { ...st.act }, ...extra });
+  const push = (text: string, extra: Partial<DLine> = {}) => out.push({ text, hp: { host: hpOf("host"), guest: hpOf("guest"), boss: hpOf("boss") }, act: { ...st.act }, ...extra });
   const nm = (s: Side, m = cur(s)) => `${monName(m)} di ${names[s]}`;
+  const alive = (s: Side) => !st.out[s] && hpOf(s) > 0;
 
   // 1. Switches and items happen before attacks.
-  for (const s of SIDES) {
+  for (const s of PLAYERS) {
     const a = e[s];
+    if (st.out[s]) continue;
     if (a.kind === "switch") {
       const i = a.idx ?? -1;
       const m = st.P[s][i];
@@ -71,20 +83,28 @@ function run(st: DuelState, e: TurnEntry, names: Record<Side, string>): DLine[] 
     }
   }
 
-  // 2. Attacks, fastest first.
+  // 2. Attacks, fastest first. In coop the boss hits one of the two players at random.
   const spd = (s: Side) => stats(cur(s)).spd * stageMult(cnd(s, cur(s)).spd);
-  const movers = SIDES.filter((s) => e[s].kind === "move");
-  if (movers.length === 2 && (spd("guest") > spd("host") || (spd("guest") === spd("host") && Math.random() < 0.5))) movers.reverse();
+  const movers = fighters.filter((s) => alive(s) && (s === "boss" || e[s as Player].kind === "move"));
+  const tie = Object.fromEntries(movers.map((s) => [s, Math.random()]));
+  movers.sort((a, b) => spd(b) - spd(a) || tie[b] - tie[a]);
   for (const s of movers) {
-    const att = cur(s), def = cur(other(s));
-    if (att.hp <= 0 || def.hp <= 0) continue;
-    const known = knownMoves(att);
-    const mv = known.includes(e[s].move ?? "") ? e[s].move! : known[0];
-    hit(s, att, def, mv);
+    if (!alive(s) || st.winner) continue;
+    let target: Side;
+    if (!st.coop) target = other(s);
+    else if (s === "boss") {
+      const opts = PLAYERS.filter(alive);
+      if (!opts.length) continue;
+      target = opts[Math.floor(Math.random() * opts.length)];
+    } else target = "boss";
+    if (!alive(target)) continue;
+    const known = knownMoves(cur(s));
+    const mv = s === "boss" ? known[Math.floor(Math.random() * known.length)] : known.includes(e[s as Player].move ?? "") ? e[s as Player].move! : known[0];
+    hit(s, target, mv);
   }
 
-  function hit(s: Side, att: Mon, def: Mon, mv: string) {
-    const o = other(s);
+  function hit(s: Side, o: Side, mv: string) {
+    const att = cur(s), def = cur(o);
     const ca = cnd(s, att), cd = cnd(o, def);
     if (ca.conf > 0) {
       ca.conf -= 1;
@@ -147,18 +167,29 @@ function run(st: DuelState, e: TurnEntry, names: Record<Side, string>): DLine[] 
 
   // 3. Fainted monsters are replaced automatically by the next one still standing.
   const lost: Side[] = [];
-  for (const s of SIDES) {
-    if (cur(s).hp > 0) continue;
+  for (const s of fighters) {
+    if (st.out[s] || hpOf(s) > 0) continue;
     push(`${nm(s)} è esausto!`);
     const next = st.P[s].findIndex((m) => m.hp > 0);
-    if (next < 0) lost.push(s);
-    else {
+    if (next < 0) {
+      st.out[s] = true;
+      lost.push(s);
+      if (st.coop && s !== "boss" && !st.out[other(s)]) push(`${names[s]} non ha più mostrelli: tocca a ${names[other(s)]} continuare!`);
+    } else {
       clear(s);
       st.act[s] = next;
       push(`${names[s]} manda in campo ${monName(cur(s))}!`);
     }
   }
-  if (lost.length === 2) {
+  if (st.coop) {
+    if (st.out.boss) {
+      st.winner = "host";
+      push(`${names.boss} è sconfitto! ${names.host} e ${names.guest} vincono insieme!`);
+    } else if (st.out.host && st.out.guest) {
+      st.winner = "boss";
+      push(`${names.boss} ha battuto entrambi. Serve più allenamento... e più tortellini.`);
+    }
+  } else if (lost.length === 2) {
     st.winner = "draw";
     push("Entrambe le squadre sono esauste: pareggio! Si offre da bere a tutti.");
   } else if (lost.length === 1) {

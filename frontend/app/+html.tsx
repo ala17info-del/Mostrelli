@@ -24,7 +24,16 @@ export default function Root({ children }: PropsWithChildren) {
               body > div:first-child { position: fixed !important; top: 0; left: 0; right: 0; bottom: 0; }
               [role="tablist"] [role="tab"] * { overflow: visible !important; }
               [role="heading"], [role="heading"] * { overflow: visible !important; }
+              /* Game controls: no blue text selection, no long-press callout menu, no tap flash */
+              html, body, body * { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+              input, textarea, input *, textarea * { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
             `,
+          }}
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `document.addEventListener("contextmenu", function (e) { if (!e.target.closest || !e.target.closest("input,textarea")) e.preventDefault(); }, { capture: true });
+document.addEventListener("selectstart", function (e) { if (!e.target.closest || !e.target.closest("input,textarea")) e.preventDefault(); }, { capture: true });`,
           }}
         />
       </head>

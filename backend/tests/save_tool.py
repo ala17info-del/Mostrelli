@@ -8,5 +8,5 @@ st = requests.get(f"{BASE}/api/save", headers=h).json()["state"]
 if len(sys.argv) > 2:
     st.update(json.loads(sys.argv[2]))
     assert requests.put(f"{BASE}/api/save", json={"state": st}, headers=h).status_code == 200
-print(json.dumps({k: st[k] for k in ["map", "x", "y", "items", "badges", "defeated", "money"]}))
+print(json.dumps({k: st[k] for k in ["map", "x", "y", "items", "badges", "defeated", "money", "picked"] if k in st}))
 print([(m["s"], m["lv"], m["xp"], m["hp"]) for m in st["party"]], len(st.get("box", [])), st.get("caught"))

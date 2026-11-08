@@ -11,7 +11,7 @@ import { PixelText } from "@/src/game/ui";
 import { colors } from "@/src/theme";
 
 // Route order along the map, north to south-east.
-const ORDER = ["ferrara", "altedo", "maggiore", "bologna", "osteria", "csp", "imola", "riviera"];
+const ORDER = ["ferrara", "altedo", "maggiore", "parma", "modena", "acetaia", "bologna", "mercato", "osteria", "csp", "imola", "riviera", "ravenna"];
 
 export default function WorldMap() {
   const insets = useSafeAreaInsets();

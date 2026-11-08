@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { api } from "@/src/api";
 import { useAuth } from "@/src/auth";
 import { Battle, BattleResult, BattleSetup } from "@/src/game/Battle";
+import { X_TRAINER_PRIZES } from "@/src/game/expansion";
 import { BgmName, initAudio, isMuted, playBgm, setMuted, sfx } from "@/src/game/audio";
 import { ALL_BADGES, BLOCKING, ENCOUNTER_TILES, ITEMS, ItemId, MAPS, Npc } from "@/src/game/data";
 import { healAll, makeMon, monName, rollWild, stats } from "@/src/game/engine";
@@ -22,6 +23,7 @@ type Dialog = { speaker: string; lines: string[]; idx: number; onDone?: () => vo
 const DELTA: Record<Dir, [number, number]> = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 const COLS = 9;
 const ENCOUNTER = 0.1;
+const EMPTY: string[] = [];
 
 export default function GameScreen() {
   const insets = useSafeAreaInsets();
@@ -83,12 +85,12 @@ export default function GameScreen() {
     const [dx, dy] = DELTA[dir];
     const nx = s.x + dx, ny = s.y + dy;
     const ch = m.tiles[ny]?.[nx];
-    const blocked = !ch || BLOCKING.has(ch) || m.npcs.some((n) => n.x === nx && n.y === ny);
+    const exit = m.exits.find((e) => e.x === nx && e.y === ny);
+    const blocked = !exit && (!ch || BLOCKING.has(ch) || m.npcs.some((n) => n.x === nx && n.y === ny));
     if (blocked) {
-      setSave((p) => ({ ...p, dir }));
+      if (s.dir !== dir) setSave((p) => ({ ...p, dir }));
       return;
     }
-    const exit = m.exits.find((e) => e.x === nx && e.y === ny);
     if (exit) {
       busyRef.current = true;
       setSave((p) => ({ ...p, map: exit.to, x: exit.tx, y: exit.ty, dir }));
@@ -98,6 +100,8 @@ export default function GameScreen() {
     }
     setSave((p) => ({ ...p, x: nx, y: ny, dir }));
     sfx("step", 0.25);
+    const pk = m.pickups?.find((q) => q.x === nx && q.y === ny && !(s.picked ?? []).includes(q.id));
+    if (pk) return collect(pk.id, pk.item);
     if (ENCOUNTER_TILES.has(ch) && Math.random() < ENCOUNTER && s.party.some((p) => p.hp > 0)) {
       stopHold();
       busyRef.current = true;
@@ -122,6 +126,15 @@ export default function GameScreen() {
     holdTimer.current = null;
   };
 
+  const collect = (id: string, item: ItemId) => {
+    stopHold();
+    hap("success");
+    sfx("heal");
+    setSave((p) => ({ ...p, picked: [...(p.picked ?? []), id], items: { ...p.items, [item]: (p.items[item] ?? 0) + 1 } }));
+    say("Hai trovato qualcosa!", [`Raccogli: ${ITEMS[item].name}! ${ITEMS[item].desc}`]);
+    setTimeout(flush, 300);
+  };
+
   const interact = () => {
     if (busyRef.current) return;
     hap("medium");
@@ -129,6 +142,8 @@ export default function GameScreen() {
     const tx = save.x + dx, ty = save.y + dy;
     const npc = map.npcs.find((n) => n.x === tx && n.y === ty);
     const sign = map.signs[`${tx},${ty}`];
+    const pk = map.pickups?.find((q) => q.x === tx && q.y === ty && !(save.picked ?? []).includes(q.id));
+    if (pk) return collect(pk.id, pk.item);
     if (sign) return say("Cartello", [sign]);
     if (!npc) return;
     const beaten = save.defeated.includes(npc.id);
@@ -163,6 +178,8 @@ export default function GameScreen() {
       return;
     }
     const npc = battle?.npc;
+    // Every win against a trainer pays an item too; bosses always give Caramelle Rare.
+    const prize: [string, number] = npc?.prize ?? (npc?.kind === "boss" ? ["caramella", 1] : X_TRAINER_PRIZES[(npc?.id.length ?? 0) % X_TRAINER_PRIZES.length]);
     const wildPay = 10 + (battle?.enemies[0]?.lv ?? 1) * 8;
     let after: { speaker: string; lines: string[] } | null = null;
     setSave((s) => {
@@ -177,6 +194,7 @@ export default function GameScreen() {
       if (r.outcome === "win" && npc) {
         n.defeated = Array.from(new Set([...n.defeated, npc.id]));
         n.money += (npc.reward ?? 0) * 2;
+        n.items[prize[0]] = (n.items[prize[0]] ?? 0) + prize[1];
         if (npc.badge) n.badges = Array.from(new Set([...n.badges, npc.badge]));
       }
       if (r.outcome === "win" && !npc) n.money += wildPay;
@@ -194,7 +212,7 @@ export default function GameScreen() {
       return n;
     });
     if (r.outcome === "win" && npc) {
-      const lines = [...(npc.after ?? []), `Hai ricevuto ${(npc.reward ?? 0) * 2} €.`];
+      const lines = [...(npc.after ?? []), `Hai ricevuto ${(npc.reward ?? 0) * 2} € e ${prize[1]}x ${ITEMS[prize[0] as ItemId].name}!`];
       if (npc.badge) {
         lines.push(`Ottieni il ${npc.badge}!`);
         const total = new Set([...save.badges, npc.badge]).size;
@@ -256,7 +274,7 @@ export default function GameScreen() {
       <View style={styles.mapArea} onLayout={onLayout}>
         {size > 0 && (
           <View style={{ alignItems: "center", justifyContent: "center", flex: 1 }}>
-            <TileMap map={map} px={save.x} py={save.y} dir={save.dir} cols={COLS} rows={rows} size={size} defeated={save.defeated} stepMs={run ? 110 : 170} />
+            <TileMap map={map} px={save.x} py={save.y} dir={save.dir} cols={COLS} rows={rows} size={size} defeated={save.defeated} picked={save.picked ?? EMPTY} stepMs={run ? 110 : 170} />
           </View>
         )}
         {!!healK && (
@@ -317,10 +335,11 @@ export default function GameScreen() {
           <Animated.View entering={FadeInDown.duration(200)} style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
             <PixelText style={styles.sheetTitle}>MENU · {save.name}</PixelText>
             <MenuItem icon="map" label="Mappa del Mondo" testID="menu-worldmap" onPress={() => { setMenu(false); router.push("/mappa"); }} />
+            <MenuItem icon="account-multiple" label="Stanze Online (sfida, co-op, scambi)" testID="menu-rooms" onPress={() => { setMenu(false); router.push("/diretta"); }} />
             <MenuItem icon="sword-cross" label="Sfida tra Amici" testID="menu-duel" onPress={() => { setMenu(false); router.push("/sfida"); }} />
             <MenuItem icon="account-group" label="Squadra" testID="menu-team" onPress={() => { setMenu(false); router.push("/team"); }} />
             <MenuItem icon="book-open-variant" label="Mostrario" testID="menu-mostrario" onPress={() => { setMenu(false); router.push("/mostrario"); }} />
-            <MenuItem icon="bag-personal" label={`Zaino: ${save.items.vasetto ?? 0} vasetti · ${save.items.brodino ?? 0} brodini · ${save.items.tortellini ?? 0} tortellini · ${save.items.caffe ?? 0} caffè · ${save.items.digestivo ?? 0} digestivi · ${save.items.gelato ?? 0} gelati`} testID="menu-bag" onPress={() => { setMenu(false); router.push("/team"); }} />
+            <MenuItem icon="bag-personal" label={`Zaino: ${save.items.vasetto ?? 0} vasetti · ${save.items.brodino ?? 0} brodini · ${save.items.tortellini ?? 0} tortellini · ${save.items.caffe ?? 0} caffè · ${save.items.caramella ?? 0} caramelle rare`} testID="menu-bag" onPress={() => { setMenu(false); router.push("/team"); }} />
             <MenuItem icon="medal" label={`Sigilli: ${save.badges.length ? save.badges.join(", ") : "nessuno"}`} testID="menu-badges" onPress={() => {}} />
             <MenuItem icon="content-save" label={sync === "saving" ? "Salvataggio..." : sync === "error" ? "Salva (errore, riprova)" : "Salva ora"} testID="menu-save" onPress={async () => { await flush(); setToast("Partita salvata!"); setMenu(false); }} />
             <MenuItem icon={muted ? "volume-off" : "volume-high"} label={muted ? "Audio: spento" : "Audio: acceso"} testID="menu-audio" onPress={() => { setMuted(!muted); setMutedState(!muted); }} />
@@ -333,7 +352,7 @@ export default function GameScreen() {
         <View style={styles.scrim}>
           <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]} testID="shop-modal">
             <PixelText style={styles.sheetTitle}>BOTTEGA · {save.money} €</PixelText>
-            {(Object.keys(ITEMS) as ItemId[]).map((id) => (
+            {(Object.keys(ITEMS) as ItemId[]).filter((id) => ITEMS[id].price > 0).map((id) => (
               <View key={id} style={styles.shopRow}>
                 <View style={{ flex: 1 }}>
                   <PixelText>{ITEMS[id].name} ({save.items[id] ?? 0})</PixelText>
@@ -379,8 +398,8 @@ const styles = StyleSheet.create({
   leadName: { fontSize: 12 },
   mapArea: { flex: 1, backgroundColor: "#0b0b0b", overflow: "hidden" },
   toast: { position: "absolute", top: 12, alignSelf: "center", backgroundColor: colors.brandSecondary, paddingHorizontal: 16, paddingVertical: 8, borderWidth: 2, borderColor: colors.onSurfaceInverse },
-  dialog: { position: "absolute", left: 8, right: 8, bottom: 8, minHeight: 120, backgroundColor: colors.surfaceSecondary, borderWidth: 3, borderColor: colors.onSurface, padding: 12 },
-  speaker: { color: colors.brandSecondary, fontSize: 12, marginBottom: 6 },
+  dialog: { position: "absolute", left: 8, right: 8, bottom: 8, minHeight: 120, backgroundColor: colors.surfaceSecondary, borderWidth: 4, borderColor: colors.onSurface, borderRadius: 6, padding: 14, paddingTop: 18, shadowColor: "#000", shadowOpacity: 0.35, shadowRadius: 0, shadowOffset: { width: 4, height: 4 }, elevation: 6 },
+  speaker: { position: "absolute", top: -14, left: 12, color: colors.onBrandSecondary, backgroundColor: colors.brandSecondary, fontSize: 12, paddingHorizontal: 8, paddingVertical: 2, borderWidth: 2, borderColor: colors.onSurface, overflow: "hidden" },
   dialogTxt: { fontSize: 15, lineHeight: 22 },
   next: { alignSelf: "flex-end", color: colors.brandSecondary, marginTop: 4 },
   controls: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 10, paddingTop: 16, borderTopWidth: 2, borderTopColor: colors.border, backgroundColor: colors.surfaceSecondary },

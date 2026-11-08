@@ -1,0 +1,44 @@
+{
+  "summary": "Iteration 9 tested movement, expansion areas, pickups, Caramella Rara, win rewards, and the coop/trade/pvp rooms, on both backend and UI. Backend: new test_iter9_rooms.py 11/11 passed and the iter7/iter8/auth regression 39/39 passed. UI at 390x844, using two browser contexts. These work: holding the d-pad walks continuously and smoothly with mouse and with CDP touch (5 tiles in a 900ms hold), the camera follows, B toggles run (the hint text changes), and A starts the NPC dialog and the trainer battle. Bologna door (2,5) leads to Mercato di Mezzo. Bologna west edge leads to Modena, Modena west edge to Parma and back, Modena door (12,2) to Acetaia Ducale and back, Riviera top edge to Ravenna and back. Pickups pickup-me_caramella and pickup-mo_tortellini (touch tap) show the 'Hai trovato qualcosa!' dialog, disappear, and save.picked persists after reload. A trainer win (Pensionato) shows 'Hai ricevuto 240 € e 1x Caramella Rara!' and adds the item. team-caramella-0 raised Lv30 to Lv31. Coop room (boss ra_teodora): both clients get live-battle with live-ally-info and the boss, and 3 sealed turns resolved. Trade room: trade-pick, trade-confirm-btn (disabled until both offer), confirmation visible to the other player, trade-done on both sides, and both server saves swapped and stayed correct after the clients exited. A wild battle triggers in grass. FAILED: (1) The no-selection and no-contextmenu protection from app/+html.tsx is NOT applied, because app.json web.output is 'single' and +html.tsx is only used for static output. Served HTML has no touch-callout CSS, body computed user-select is 'auto', and the contextmenu event is not prevented. (2) The World Map (/mappa) does not list Modena, Parma, Ravenna or the interiors: ORDER is hard-coded to the 8 old towns. It does not crash. (3) Coop rewards can be farmed: re-entering a finished coop room by code grants money and a Caramella Rara again. Deprecated packages: none found.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/live (coop)", "issue": "boss is checked only against the regex ^[a-z_]{2,30}$, not against the real boss NPC ids, so an unknown boss id is accepted. Also, kind 'pass' is accepted in pvp rooms, not only in coop."},
+      {"endpoint": "POST /api/live/{code}/join", "issue": "A participant can re-join a finished ('done') room. The response is the finished room with the full log, which lets the client grant the coop reward again (see integration issue)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "app/+html.tsx (web no-select / no-contextmenu)", "issue": "Not applied at runtime. app.json web.output='single', so Expo Router never renders +html.tsx. Verified: served HTML has no 'touch-callout' style, getComputedStyle(body).userSelect is 'auto' (also on dpad-up), and a dispatched contextmenu on dpad-up has defaultPrevented=false. Blue selection and the long-press callout can therefore still happen in iPhone Safari and in the web preview. Fix: inject the same <style> and the contextmenu/selectstart listeners at runtime in app/_layout.tsx when Platform.OS==='web' (document.head.appendChild). Also add style userSelect:'none' on the game root/d-pad Views (web).", "testID": "dpad-up", "priority": "HIGH"},
+      {"component": "app/mappa.tsx World Map", "issue": "ORDER (line 14) is hard-coded to the 8 original towns. The new maps modena, parma, ravenna (and the interiors acetaia/mercato, with the Ferruccio boss and badge) are missing. The header correctly says 'Sei a Modena' and Sigilli x/9, so 3 of the 9 badges are not shown anywhere on the map.", "testID": "worldmap-town-modena", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [
+      {"flow": "Coop reward (LiveBattle.tsx:85-92, 108)", "issue": "The reward (boss.reward € + 1 Caramella Rara) is granted whenever phase becomes 'over' with st.winner==='host'. When a participant re-enters a finished coop room code (join returns the done room, the log is replayed, and 'Bentornato' then leads to over), the reward is granted again on every re-entry: an exploit for farming Caramelle Rare. Fix: grant it only when the winning turn is newly sealed during this mount (shown.current < log.length at mount), or record rewarded[side] on the server.", "affected_testIDs": ["live-over", "live-result"]}
+    ],
+    "design_issues": [
+      {"screen": "Interiors (Mercato di Mezzo, Acetaia Ducale)", "issues": ["The floor tile 'P' is drawn as arched portico walls, so walkable floor looks the same as walls and the brick 'R' stalls. The player cannot tell where to walk. Use a plain floor/tiles art for interiors.", "The 'X' void rows below the room leave about 35% of the map viewport black on a 390x844 screen. Consider centring the room vertically."]},
+      {"screen": "Team screen", "issues": ["The team-items summary line does not show the Caramelle Rare count (the game menu bag line does)."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_iter9_rooms.py", "/app/backend/tests/setup_iter9_users.py", "/app/backend/tests/save_tool.py", "/app/test_reports/pytest/iter9.xml"],
+  "action_items": [
+    "HIGH: Move the no-select / no-touch-callout CSS and the contextmenu + selectstart preventDefault from app/+html.tsx into a runtime web injection in app/_layout.tsx, because +html.tsx is ignored with web.output 'single'. Do not change app.json.",
+    "MEDIUM: Add modena, parma, ravenna (and optionally the interiors acetaia/mercato) to ORDER in app/mappa.tsx, or build the list from MAPS.",
+    "MEDIUM: Stop the coop reward from being granted again when re-entering a finished room (LiveBattle.tsx line 90). Grant it only on a freshly sealed winning turn, or track rewarded sides on the server.",
+    "LOW: Make the interior floor art distinct from walls. Show the Caramelle count in the team-items line.",
+    "LOW: Check POST /api/live boss against the real boss ids, and reject kind 'pass' in pvp rooms."
+  ],
+  "critical_code_review_comments": [
+    "TileMap.tsx: Ground and Actors are memoised and movement uses reanimated shared values. Verified that the player-sprite transform interpolates smoothly (about 40px every 150ms) while the d-pad is held.",
+    "trade_confirm: the status 'swapping' lock prevents a double swap. Saves are overwritten as whole documents without a transaction. If a player has another tab or device open with stale state, its autosave can bring back the traded Mostrello (duplication). This is an edge case.",
+    "In step() (game.tsx:80), two taps inside the same render read the same saveRef, so one of them is lost. In one run, 1 of 12 sequential taps (300ms apart) did not register. This was not reproducible enough to be a bug, but it is worth watching.",
+    "The shop filter ITEMS price>0 (game.tsx:355) correctly hides caramella."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter9_rooms.py (new)", "/app/backend/tests/setup_iter9_users.py (new)", "/app/backend/tests/save_tool.py (also prints picked)"],
+  "success_rate": {"backend": "100% (11/11 new tests, 39/39 regression tests)", "frontend": "about 85%: map movement, transitions, pickups, caramella, rewards, coop and trade pass; 3 failures: web no-select CSS not applied, World Map missing the new maps, coop reward can be re-granted"},
+  "seed_data_creation": "Registered TEST_ users test_it9_uih_90d59@example.com and test_it9_uig_b101e@example.com (password secret123, save names TEST_H / TEST_G; HP was seeded above max, so '200/67 PV' in the UI is a seeding artefact, not an app bug), plus test_it9_a_/b_/x_* users from pytest. Rooms created by the tests expire through the TTL. No seeded or real user data was modified.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Use setup_iter9_users.py (writes /tmp/it9users.json) and save_tool.py <email> '{json patch}' with EXPO_PUBLIC_BACKEND_URL exported to put the player anywhere. Game testIDs: btn-a-interact, btn-b-run, btn-menu-center, game-town-name, dpad-*. Synthetic dispatch_event pointerdown does NOT move the player; use page.mouse.down/up on the d-pad centre, or CDP Input.dispatchTouchEvent in a has_touch context. Screenshots with quality need a .jpg path. For coop, room-boss-ra_teodora is the last chip. Trade: trade-pick-<uid> uses the uid from the save."
+}

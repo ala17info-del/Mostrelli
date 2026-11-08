@@ -112,6 +112,11 @@ export function applyItem(m: Mon, id: ItemId): { ok: boolean; msg: string } {
     m.hp = Math.floor(max * it.amount);
     return { ok: true, msg: `${monName(m)} beve il Caffè Ristretto e riprende i sensi!` };
   }
+  if (it.kind === "level") {
+    if (m.lv >= 50) return { ok: false, msg: `${monName(m)} è già al livello massimo.` };
+    const lines = gainXp(m, (m.lv + 1) ** 3 - m.xp);
+    return { ok: true, msg: `${monName(m)} mangia la Caramella Rara! ${lines.join(" ")}` };
+  }
   if (it.kind === "cureConf" || it.kind === "cureBurn") return { ok: false, msg: `${it.name} si usa solo durante le lotte.` };
   return { ok: false, msg: "Non si può usare qui." };
 }

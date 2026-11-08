@@ -6,8 +6,17 @@ const hash = (x: number, y: number) => ((x * 73856093) ^ (y * 19349663)) >>> 0;
 
 type P = { ch: string; size: number; x: number; y: number; phase: number };
 
+// Warmer, more saturated handheld-style palette applied on top of the original tile colours.
+const REMAP: Record<string, string> = {
+  "#7cb342": "#78c850", "#5f9a2e": "#58a838", "#4e8a26": "#3f8f30", "#3f8f3a": "#38a048", "#17502a": "#1d5c34",
+  "#b6dd78": "#c8f088", "#9ccc5a": "#a8e070", "#d7b98a": "#e8c890", "#f0d9a0": "#f8e4a8", "#2a8a8a": "#3098c8",
+  "#1d7f99": "#2878c0", "#8fd3d3": "#90d8f0", "#7fd3e6": "#88d0f8", "#b8ecef": "#c8f0ff", "#a83a2a": "#c84830",
+  "#8d3b23": "#a04830", "#b5562f": "#c86038", "#ecdcb8": "#f8ecd0", "#4a4a4a": "#505868", "#b8a68e": "#c0b0a0",
+};
+const rc = (c: string) => REMAP[c] ?? c;
+
 function Px({ l, t, w, h, c, r }: { l: number; t: number; w: number; h: number; c: string; r?: number }) {
-  const st: ViewStyle = { position: "absolute", left: l, top: t, width: w, height: h, backgroundColor: c };
+  const st: ViewStyle = { position: "absolute", left: l, top: t, width: w, height: h, backgroundColor: rc(c) };
   if (r) st.borderRadius = r;
   return <View style={st} />;
 }
@@ -52,7 +61,7 @@ function TileArtBase({ ch, size: s, x, y, phase }: P) {
     O: "#1d7f99", R: "#a83a2a", H: "#ecdcb8", D: "#ecdcb8", B: "#8d3b23", F: "#7cb342", S: "#7cb342",
     A: "#4a4a4a", Y: "#f0d9a0", Q: "#f0d9a0", U: "#f0d9a0", X: "#0b0b0b",
   };
-  const bg = base[ch] ?? base.X;
+  const bg = rc(base[ch] ?? base.X);
   let inner: React.ReactNode = null;
   switch (ch) {
     case ",":

@@ -1,3 +1,5 @@
+import { X_SPRITES } from "./expansion";
+
 // Original 12x12 pixel art. '.' = transparent.
 export const PAL: Record<string, string> = {
   k: "#1a1a1a", w: "#ffffff", y: "#f2c94c", o: "#e0913a", r: "#c0392b",
@@ -144,6 +146,18 @@ export const SPRITES: Record<string, string[]> = {
     "...kkkkkk...", "..kAAAAAAk..", ".kAAAAAAAAk.", "..kBBBBBBk..", "..kBBBBBBk..", "..kkBBBBkk..",
     "..kkCCCCkk..", ".khCCCCCChk.", ".khCCCCCChk.", "..kSSSSSSk..", "..kSk..kSk..", "..kkk..kkk..",
   ],
+  person_side: [
+    "...kkkkkk...", "..kAAAAAAk..", ".kAAAAAAAAAk", "..khhhhhhk..", "..khhhhnhk..", "..khhhhhhk..",
+    "...kCCCCk...", "..kCCCChk...", "..kCCCChk...", "..kSSSSSk...", "...kSkSk....", "...kkkkk....",
+  ],
+  person_side_walk: [
+    "...kkkkkk...", "..kAAAAAAk..", ".kAAAAAAAAAk", "..khhhhhhk..", "..khhhhnhk..", "..khhhhhhk..",
+    "...kCCCCk...", "..kCCCChk...", "..kCCCChk...", "..kSSSSSk...", "..kSk.kSk...", "..kkk.kkk...",
+  ],
+  person_back_walk: [
+    "...kkkkkk...", "..kAAAAAAk..", ".kAAAAAAAAk.", "..kBBBBBBk..", "..kBBBBBBk..", "..kkBBBBkk..",
+    "..kkCCCCkk..", ".khCCCCCChk.", ".khCCCCCChk.", "..kSSSSSSk..", ".kSk...kSk..", ".kkk....kkk.",
+  ],
   person_walk: [
     "...kkkkkk...", "..kAAAAAAk..", ".kAAAAAAAAk.", "..khhhhhhk..", "..khnhhnhk..", "..khhhhhhk..",
     "..kkCCCCkk..", ".khCCCCCChk.", ".khCCCCCChk.", "..kSSSSSSk..", ".kSk...kSk..", ".kkk....kkk.",
@@ -152,4 +166,5 @@ export const SPRITES: Record<string, string[]> = {
     "...kkkkkk...", "..kAAAAAAk..", ".kAAAAAAAAk.", "..khhhhhhk..", "..khnhhnhk..", "..khhhhhhk..",
     "..kkCCCCkk..", ".khCCCCCChk.", ".khCCCCCChk.", "..kSSSSSSk..", "..kSk..kSk..", "..kkk..kkk..",
   ],
+  ...X_SPRITES,
 };

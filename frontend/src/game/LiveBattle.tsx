@@ -9,9 +9,9 @@ import { colors, FONT } from "@/src/theme";
 
 import { sfx } from "./audio";
 import { HealFx, HitFx } from "./BattleFx";
-import { FX_LABEL, ITEMS, ItemId, MOVES, SPECIES, TYPES } from "./data";
+import { FX_LABEL, ITEMS, ItemId, MAPS, MOVES, Npc, SPECIES, TYPES } from "./data";
 import { DLine, initDuel, LiveAct, other, resolveTurn, Side, TurnEntry } from "./duelEngine";
-import { knownMoves, Mon, monName, stats } from "./engine";
+import { knownMoves, makeMon, Mon, monName, stats } from "./engine";
 import { useGame } from "./GameContext";
 import { battleSize, PixelSprite } from "./PixelSprite";
 import { hap, HpBar, PixelText, RetroButton } from "./ui";
@@ -20,27 +20,37 @@ export type Live = {
   code: string; side: Side; status: "waiting" | "active" | "done"; turn: number;
   host: { name: string; party: Mon[] }; guest: { name: string; party: Mon[] } | null;
   log: TurnEntry[]; my_action: boolean; their_action: boolean; winner: Side | "draw" | null;
+  mode: "pvp" | "coop" | "trade"; boss: string | null;
+  offers: Partial<Record<Side, Mon>>; confirms: Partial<Record<Side, boolean>>; trade_done: boolean;
+};
+export const ROOM_BOSSES: Npc[] = Object.values(MAPS).flatMap((m) => m.npcs.filter((n) => n.kind === "boss"));
+const bossTeam = (id: string | null) => {
+  const n = ROOM_BOSSES.find((b) => b.id === id);
+  // Two players at once: the opponent gets +3 levels to stay a real challenge.
+  return { npc: n, team: (n?.team ?? []).map(([sp, lv], i) => ({ ...makeMon(sp, Math.min(50, lv + 3)), uid: `b${i}` })) };
 };
 type Phase = "msg" | "menu" | "moves" | "bag" | "itemTarget" | "switch" | "wait" | "over";
 
 export function LiveBattle({ live, setLive, onExit }: { live: Live; setLive: (l: Live) => void; onExit: () => void }) {
   const insets = useSafeAreaInsets();
   const { save, setSave } = useGame();
-  const side = live.side, foeSide = other(side);
-  const names = useMemo(() => ({ host: live.host.name, guest: live.guest?.name ?? "Sfidante" }), [live.host.name, live.guest?.name]);
+  const coop = live.mode === "coop";
+  const side = live.side, foeSide: Side = coop ? "boss" : other(side);
+  const boss = useMemo(() => bossTeam(live.boss), [live.boss]);
+  const names = useMemo(() => ({ host: live.host.name, guest: live.guest?.name ?? "Sfidante", boss: boss.npc?.name ?? "Capo" }), [live.host.name, live.guest?.name, boss]);
 
   const sim = useMemo(() => {
-    const st = initDuel(live.host.party, live.guest!.party);
+    const st = initDuel(live.host.party, live.guest!.party, coop ? boss.team : undefined);
     const per = live.log.map((e) => resolveTurn(st, e, names));
     return { st, per };
-  }, [live.log, live.host.party, live.guest, names]);
+  }, [live.log, live.host.party, live.guest, names, coop, boss]);
   const { st } = sim;
 
-  const lineNow = (text: string): DLine => ({ text, hp: { host: st.P.host[st.act.host].hp, guest: st.P.guest[st.act.guest].hp }, act: { ...st.act } });
+  const lineNow = (text: string): DLine => ({ text, hp: { host: st.P.host[st.act.host].hp, guest: st.P.guest[st.act.guest].hp, boss: st.P.boss[st.act.boss]?.hp ?? 0 }, act: { ...st.act } });
   const shown = useRef(live.log.length);
   const [queue, setQueue] = useState<DLine[]>(() =>
     live.log.length === 0
-      ? [lineNow(`Sfida in diretta contro ${names[foeSide]}!`), lineNow(`${names[foeSide]} manda in campo ${monName(st.P[foeSide][0])}. Vai, ${monName(st.P[side][0])}!`)]
+      ? [lineNow(coop ? `${names.host} e ${names.guest} sfidano insieme ${names.boss}!` : `Sfida in diretta contro ${names[foeSide]}!`), lineNow(`${names[foeSide]} manda in campo ${monName(st.P[foeSide][0])}. Vai, ${monName(st.P[side][0])}!`)]
       : [lineNow(`Bentornato nella sfida contro ${names[foeSide]}!`)],
   );
   const [qi, setQi] = useState(0);
@@ -49,6 +59,8 @@ export function LiveBattle({ live, setLive, onExit }: { live: Live; setLive: (l:
   const [err, setErr] = useState("");
   const [fx, setFx] = useState<{ k: number; line: DLine } | null>(null);
   const ended = useRef(false);
+  // Re-entering a finished room must not pay the coop reward again.
+  const finishedAtMount = useRef(live.status === "done");
 
   // New sealed turns arrived: play their messages.
   useEffect(() => {
@@ -77,8 +89,9 @@ export function LiveBattle({ live, setLive, onExit }: { live: Live; setLive: (l:
     if (phase !== "over" || ended.current) return;
     ended.current = true;
     hap(winner === side ? "success" : "error");
+    if (coop && st.winner === "host" && boss.npc && !finishedAtMount.current) setSave((s) => ({ ...s, money: s.money + (boss.npc!.reward ?? 0), items: { ...s.items, caramella: (s.items.caramella ?? 0) + 1 } }));
     if (st.winner && live.status === "active") api<Live>(`/live/${live.code}/end`, { method: "POST", body: JSON.stringify({ winner: st.winner }) }).then(setLive).catch(() => {});
-  }, [phase, winner, side, st.winner, live.status, live.code, setLive]);
+  }, [phase, winner, side, st.winner, live.status, live.code, setLive, coop, boss, setSave]);
 
   const showing = phase === "msg" ? queue[qi] : null;
   useEffect(() => {
@@ -95,7 +108,10 @@ export function LiveBattle({ live, setLive, onExit }: { live: Live; setLive: (l:
     hap("selection");
     if (qi < queue.length - 1) return setQi(qi + 1);
     if (st.winner || live.status === "done") return setPhase("over");
-    setPhase(live.my_action ? "wait" : "menu");
+    if (live.my_action) return setPhase("wait");
+    // In coop a player with no Mostrelli left just passes while the friend keeps fighting.
+    if (st.out[side]) return send({ kind: "pass" });
+    setPhase("menu");
   };
 
   const send = async (a: LiveAct) => {
@@ -132,8 +148,9 @@ export function LiveBattle({ live, setLive, onExit }: { live: Live; setLive: (l:
   const ehp = showing ? showing.hp[foeSide] : foe.hp;
   const myParty = st.P[side];
   const bag = (Object.keys(ITEMS) as ItemId[]).filter((id) => id !== "vasetto" && (save?.items[id] ?? 0) > 0);
-  const resultText =
-    winner === "draw" ? "Pareggio! Nessuno vince, ma tutti mangiano." :
+  const resultText = coop
+    ? (winner === "host" ? `Vittoria di squadra contro ${names.boss}! Ricevete ${boss.npc?.reward ?? 0} € e una Caramella Rara.` : winner === "boss" ? `${names.boss} vi ha battuti. Riprovate insieme!` : `${names[other(side)]} ha lasciato la stanza.`)
+    : winner === "draw" ? "Pareggio! Nessuno vince, ma tutti mangiano." :
     winner === side ? (live.status === "done" && !st.winner ? `${names[foeSide]} si è arreso. Hai vinto!` : "Hai vinto la sfida in diretta! Il tuo amico offrirà il caffè.") :
     st.winner ? `Ha vinto ${names[foeSide]}. Rivincita?` : "Ti sei arreso. Sarà per la prossima!";
 
@@ -151,6 +168,15 @@ export function LiveBattle({ live, setLive, onExit }: { live: Live; setLive: (l:
             {fxOn(foeSide)}
           </View>
         </View>
+        {coop && (() => {
+          const ally = other(side), am = st.P[ally][act[ally]];
+          return (
+            <View style={styles.ally} testID="live-ally-info">
+              <PixelSprite name={am.s} size={28} />
+              <PixelText style={styles.meta} numberOfLines={1}>Alleato {names[ally]}: {monName(am)} {st.out[ally] ? "· fuori" : `${showing ? showing.hp[ally] : am.hp}/${stats(am).hp} PV`}</PixelText>
+            </View>
+          );
+        })()}
         <View style={styles.row}>
           <View style={styles.spriteWrap}>
             <View style={styles.ground} />
@@ -287,6 +313,7 @@ function Cmd({ label, color, fg, onPress, testID }: { label: string; color: stri
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surface },
+  ally: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", backgroundColor: colors.surfaceSecondary, borderWidth: 2, borderColor: colors.onSurface, paddingHorizontal: 6, paddingVertical: 2, maxWidth: "90%" },
   scene: { flex: 1, justifyContent: "space-around", paddingHorizontal: 16, overflow: "hidden" },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   infoBox: { width: "48%", backgroundColor: colors.surfaceSecondary, borderWidth: 2, borderColor: colors.onSurface, padding: 8, gap: 4 },
