@@ -4,7 +4,6 @@
 import type { GameMap, Move, Species } from "./data";
 
 const L = (A: string, C: string) => ({ A, C });
-const ROOM_FOOT = ["XXXXXXXXXXXXXXXX", "XXXXXXXXXXXXXXXX", "XXXXXXXXXXXXXXXX", "XXXXXXXXXXXXXXXX"];
 
 export const X_MOVES: Record<string, Move> = {
   aceto: { name: "Aceto Invecchiato", type: "terme", power: 75, acc: 95, fx: { k: "defDown", p: 30 } },
@@ -37,10 +36,23 @@ export const X_SPRITES: Record<string, string[]> = {
   mosaichino: ["............", "..kkkkkkkk..", ".kzlvzlvzlk.", ".klvzlvzlvk.", ".kwnzlvwnzk.", ".kvzlvzlvzk.", ".kzlvrrvzlk.", ".klvzlvzlvk.", "..kkkkkkkk..", "...kz..zk...", "...kk..kk...", "............"],
   mosaicone: ["......zzzz......", ".....zkkkkz.....", "...kkkkkkkkkk...", "..kzlvzlvzlvzk..", ".kzlvzlvzlvzlvk.", ".klvwnvzlvwnzlk.", ".kvzlvzlvzlvzlk.", ".kzlvzlrrlvzlvk.", ".klvzlvzlvzlvzk.", "..kvzlvzlvzlvk..", "...kkkkkkkkkk...", "..kz.k....k.zk..", ".kz..k....k..zk.", ".kk..kk..kk..kk.", "................", "................"],
   rossocorsa: ["............", "............", "....kkkkk...", "...krrwwrk..", "..krrrwnrrk.", ".krrrrrrrrrk", "krryrrrrryrk", "krrrrrrrrrrk", "kkSSkkkkSSkk", ".kSnk..kSnk.", "..kk....kk..", "............"],
+  boss_umarell: ["..kkkkkkkk..", ".kAAAAAAAAk.", "..khhhhhhk..", "..kwkhhkwk..", "..khhhhhhk..", "...khhhhk...", "..kCCCCCCk..", ".kCCCCCCCCk.", ".kChCCCCCCk.", "..kSSSSSSk..", "..kSk..kSk..", "..kkk..kkk.."],
+  boss_contessa: ["....kAAk....", "...kAAAAk...", "..kAAAAAAk..", "..kAhhhhAk..", "..khnhhnhk..", "..khhrrhhk..", "...kCCCCk...", "..kCCwwCCk..", ".kCCCCCCCCk.", "kCCCCCCCCCCk", "kCCCCCCCCCCk", "kkkkkkkkkkkk"],
+  boss_duchessa: ["...zkzzkz...", "...kAAAAk...", "..kAAAAAAk..", "..kAhhhhAk..", "..khnhhnhk..", "..khhrrhhk..", "...kzzzzk...", "..kCCwwCCk..", ".kCCCCCCCCk.", "kCCCCCCCCCCk", "kCzCCzCCzCCk", "kkkkkkkkkkkk"],
+  boss_camionista: ["..kkkkkkkk..", ".kAAAAAAAAkk", "..kAAAAAAk..", "..khhhhhhk..", "..khnhhnhk..", "..kBBBBBBk..", "...kBBBBk...", ".kCCCCCCCCk.", "kCCwCCCCwCCk", "kh.kSSSSk.hk", "...kSkkSk...", "...kk..kk..."],
+  boss_nonna: ["....kwwk....", "...kwwwwk...", "..kwwwwwwk..", "..kckhhkck..", "..khhhhhhk..", "...khrrhk...", "..kAAAAAAk..", ".kAACCCCAAk.", ".kCCCCCCCCk.", ".kCCCCCCCCk.", "..kCCCCCCk..", "..kkkkkkkk.."],
+  boss_pilota: ["...kkkkkk...", "..kAAAAAAk..", ".kAAAAAAAAk.", ".kAnnnnnnAk.", ".kAnwnnnnAk.", "..kAAAAAAk..", "..kCCzzCCk..", ".kCCCCCCCCk.", ".khCCCCCChk.", "..kSSSSSSk..", "..kSk..kSk..", "..kkk..kkk.."],
+  boss_romeo: ["...zkzzkz...", "...kzzzzk...", "..kBBBBBBk..", "..khhhhhhk..", "..knnhhnnk..", "..khhrrhhk..", "...khhhhk...", ".khkCCCCkhk.", ".khkCCCCkhk.", "..kSSSSSSk..", "..khk..khk..", "..kkk..kkk.."],
+  boss_aceto: ["..kkkkkkk...", ".kAAAAAAAk..", "..khhhhhhk..", "..khnhhnhk..", "..kBBBBBBk..", "...khhhhk...", "..kCwwwwCk..", ".kCCwwwwCCk.", ".khCwwwwChk.", "..kSwwwwSk..", "..kSk..kSk..", "..kkk..kkk.."],
+  boss_teodora: ["..kzkzzkzk..", "..kzzzzzzk..", "..kBhhhhBk..", "..yBnhhnBy..", "..kBhrrhBk..", "...khhhhk...", "..kzzzzzzk..", ".kCCzCCzCCk.", ".kCCCCCCCCk.", "kCCCCCCCCCCk", "kCCCCCCCCCCk", "kkkkkkkkkkkk"],
+  shop_apron: ["..kkkkkkkk..", ".kAAAAAAAAk.", "..khhhhhhk..", "..khnhhnhk..", "..khhhhhhk..", "...khrrhk...", "..kCwwwwCk..", ".kCCwwwwCCk.", ".khCwwwwChk.", "..kSwwwwSk..", "..kSk..kSk..", "..kkk..kkk.."],
+  shop_baker: ["...kkkkkk...", "..kwwwwwwk..", "..kwwwwwwk..", "..kkkkkkkk..", "..khnhhnhk..", "..khhhhhhk..", "..kCCCCCCk..", ".kCCwwwwCCk.", ".khCwwwwChk.", "..kSwwwwSk..", "..kSk..kSk..", "..kkk..kkk.."],
+  shop_straw: ["....kkkk....", "...kyyyyk...", "kkkyyyyyykkk", "kyyyAAAAyyyk", "kkkhhhhhhkkk", "..khnhhnhk..", "..khhhhhhk..", "..kCCCCCCk..", ".khCCCCCChk.", "..kSSSSSSk..", "..kSk..kSk..", "..kkk..kkk.."],
+  shop_bandana: ["..kkkkkkkk..", ".kAAAAAAAAkA", "..kAAAAAAkA.", "..khnhhnhk..", "..khhhhhhk..", "...khrrhk...", "..kCCCCCCk..", ".kCCCCCCCCk.", ".khCCCCCChk.", "..kSSSSSSk..", "..kSk..kSk..", "..kkk..kkk.."],
+  shop_moustache: ["...kkkkkk...", "..khhhhhhk..", "..khhhhhhk..", "..khnhhnhk..", "..kBBBBBBk..", "...khhhhk...", "..kACCCCAk..", ".kAACCCCAAk.", ".khACCCCAhk.", "..kSSSSSSk..", "..kSk..kSk..", "..kkk..kkk.."],
+  shop_glasses: ["...kkkkkk...", "..kBBBBBBk..", ".kBBBBBBBBk.", ".kBkckkckBk.", ".kBhhhhhhBk.", ".kBkhrrhkBk.", "..kAAAAAAk..", ".kCCAAAACCk.", ".khCCCCCChk.", "..kCCCCCCk..", "..kSk..kSk..", "..kkk..kkk.."],
   caramella: ["............", "............", "............", "kk..kkkk..kk", "kpkkrrrrkkpk", "kppkrwrrkppk", "kpkkrrrrkkpk", "kk..kkkk..kk", "............", "............", "............", "............"],
 };
-
-const room = (top: string[]) => [...top, ...ROOM_FOOT];
 
 export const X_MAPS: Record<string, GameMap> = {
   modena: {
@@ -51,7 +63,7 @@ export const X_MAPS: Record<string, GameMap> = {
       "..........C.....", "T,,S,,PCCCP,,,,T", "T,,,,,PPPPP,AAAT", "TGGG,,,,,,,,AAAT",
       "TGGG,,FF,,,,AAAT", "TGGGG,FF,,GGGGGT", "TGGGG,,,,,GGGGGT", "TTTTTTTTTTTTTTTT",
     ],
-    exits: [{ x: 15, y: 8, to: "bologna", tx: 1, ty: 8 }, { x: 0, y: 8, to: "parma", tx: 14, ty: 8 }, { x: 12, y: 2, to: "acetaia", tx: 7, ty: 10 }],
+    exits: [{ x: 15, y: 8, to: "bologna", tx: 1, ty: 8 }, { x: 0, y: 8, to: "parma", tx: 14, ty: 8 }, { x: 12, y: 2, to: "acetaia", tx: 7, ty: 14 }],
     heal: { x: 3, y: 7 },
     wild: [["balsamino", 24, 27, 3], ["rossocorsa", 25, 27, 1], ["mortazzone", 24, 26, 2], ["crescentino", 24, 26, 2], ["pistonzo", 25, 27, 2]],
     signs: { "3,9": "MODENA: Ghirlandina, aceto e motori. Qui si va piano solo a tavola." },
@@ -65,8 +77,12 @@ export const X_MAPS: Record<string, GameMap> = {
   },
   acetaia: {
     id: "acetaia", name: "Acetaia Ducale", music: "terme",
-    tiles: room(["BBBBBBBBBBBBBBBB", "BHHHHHHHHHHHHHHB", "BPPPPPPPPPPPPPPB", "BPBBPPBBPPBBPPPB", "BPPPPPPPPPPPPPPB", "BPBBPPBBPPBBPPPB", "BPPPPPPPPPPPPPPB", "BPPPPPPPPPPPPPPB", "BPPPPPPPPPPPPPPB", "BPPPPPPPPPPPPPPB", "BPPPPPPPPPPPPPPB", "BBBBBBB.BBBBBBBB"]),
-    exits: [{ x: 7, y: 11, to: "modena", tx: 12, ty: 3 }],
+    tiles: [
+      "NNNNNNNNNNNNNNNN", "JKKKKLLLLLLKKKKJ", "JLLLLLLLLLLLLLLJ", "JLKKLLKKLLKKLLLJ", "JLLLLLLLLLLLLLLJ", "JLKKLLKKLLKKLLLJ",
+      "JLLLLLLLLLLLLLLJ", "JLLLLVVVVVLLLLLJ", "JLLLLVVVVVLLLLLJ", "JLKKLLLLLLLLKKLJ", "JLLLLLLLLLLLLLLJ", "JLKKLLLLLLLLKKLJ",
+      "JLLLLLLLLLLLLLLJ", "JLLLLLLLLLLLLLLJ", "JLLLLLLLLLLLLLLJ", "NNNNNNNLNNNNNNNN",
+    ],
+    exits: [{ x: 7, y: 15, to: "modena", tx: 12, ty: 3 }],
     heal: { x: 3, y: 7 },
     wild: [],
     signs: {},
@@ -120,18 +136,30 @@ export const X_MAPS: Record<string, GameMap> = {
   },
   mercato: {
     id: "mercato", name: "Mercato di Mezzo", music: "bologna",
-    tiles: room(["BBBBBBBBBBBBBBBB", "BHHHHHHHHHHHHHHB", "BPPPPPPPPPPPPPPB", "BPRRRPPRRRPPRRRB", "BPPPPPPPPPPPPPPB", "BPPPPPPPPPPPPPPB", "BPRRRPPRRRPPRRRB", "BPPPPPPPPPPPPPPB", "BPPPPPPPPPPPPPPB", "BPPPPPPPPPPPPPPB", "BPPPPPPPPPPPPPPB", "BBBBBBB.BBBBBBBB"]),
-    exits: [{ x: 7, y: 11, to: "bologna", tx: 2, ty: 6 }],
+    tiles: [
+      "NNNNNNNNNNNNNNNN", "JMMMCCMMMCCMMMCJ", "JCCCCCCCCCCCCCCJ", "JCCCCCCCCCCCCCCJ", "JCCCCCCCCCCCCCCJ", "JMMMCCMMMCCMMMCJ",
+      "JCCCCCCCCCCCCCCJ", "JCCCCCCCCCCCCCCJ", "JCCCVVVVVVVVCCCJ", "JCCCVVVVVVVVCCCJ", "JCCCCCCCCCCCCCCJ", "JMMMCCMMMCCMMMCJ",
+      "JCCCCCCCCCCCCCCJ", "JCCCCCCCCCCCCCCJ", "JCCCCCCCCCCCCCCJ", "NNNNNNNCNNNNNNNN",
+    ],
+    exits: [{ x: 7, y: 15, to: "bologna", tx: 2, ty: 6 }],
     heal: { x: 2, y: 6 },
     wild: [],
     signs: {},
     pickups: [{ id: "me_caramella", x: 14, y: 9, item: "caramella" }, { id: "me_brodini", x: 1, y: 9, item: "brodino" }],
     npcs: [
-      { id: "me_fruttivendola", x: 3, y: 4, name: "Fruttivendola Loredana", look: L("#2e7d32", "#fbc02d"), kind: "shop", lines: ["Pesche, ciliegie, vasetti! Tutto di stagione, soprattutto i prezzi."] },
+      { id: "me_fruttivendola", x: 3, y: 6, name: "Fruttivendola Loredana", look: L("#2e7d32", "#fbc02d"), kind: "shop", lines: ["Pesche, ciliegie, vasetti! Tutto di stagione, soprattutto i prezzi."] },
       { id: "me_tigelle", x: 13, y: 4, name: "Venditore di Tigelle", look: L("#ffffff", "#7b4a2a"), kind: "talk", lines: ["Le crescentine a Modena le chiamano tigelle. Io le chiamo pranzo, merenda e cena.", "Dicono che a ovest, oltre Modena, ci sia una Duchessa che affetta i forestieri. Io non ci vado senza tortellini."] },
       { id: "me_pensionato", x: 9, y: 7, name: "Pensionato al Banco", look: L("#616161", "#8d6e63"), kind: "trainer", lines: ["Sono qui dalle sei per avere le zucchine migliori. Nessuno passa prima di me. Nemmeno tu!"], team: [["umarellino", 10], ["crescentino", 11]], reward: 120, prize: ["caramella", 1], after: ["Va bene, passa pure. Ma le zucchine sono mie."] },
     ],
   },
+};
+
+// Which drawing each capopalestra / shopkeeper uses (everyone else is a regular person).
+export const NPC_SPRITES: Record<string, string> = {
+  bo_gino: "boss_umarell", fe_contessa: "boss_contessa", og_loris: "boss_camionista", cs_ivonne: "boss_nonna", im_ivano: "boss_pilota",
+  ri_romeo: "boss_romeo", ac_ferruccio: "boss_aceto", pa_duchessa: "boss_duchessa", ra_teodora: "boss_teodora",
+  bo_bottega: "shop_apron", fe_fornaio: "shop_baker", cs_farmacia: "shop_glasses", cm_ferramenta: "shop_moustache", al_banco: "shop_straw",
+  ri_ambulante: "shop_bandana", mo_salumiere: "shop_apron", pa_casaro: "shop_baker", ra_mosaicista: "shop_glasses", me_fruttivendola: "shop_straw",
 };
 
 export const X_BADGES = ["Sigillo del Balsamico", "Sigillo Ducale", "Sigillo dei Mosaici"];
@@ -141,7 +169,7 @@ export const X_TRAINER_PRIZES: [string, number][] = [["brodino", 2], ["vasetto",
 export function linkExpansion(maps: Record<string, GameMap>) {
   const open = (m: GameMap, x: number, y: number) => { m.tiles[y] = m.tiles[y].slice(0, x) + "." + m.tiles[y].slice(x + 1); };
   open(maps.bologna, 0, 8);
-  maps.bologna.exits.push({ x: 0, y: 8, to: "modena", tx: 14, ty: 8 }, { x: 2, y: 5, to: "mercato", tx: 7, ty: 10 });
+  maps.bologna.exits.push({ x: 0, y: 8, to: "modena", tx: 14, ty: 8 }, { x: 2, y: 5, to: "mercato", tx: 7, ty: 14 });
   open(maps.riviera, 7, 0);
   maps.riviera.exits.push({ x: 7, y: 0, to: "ravenna", tx: 7, ty: 14 });
 }

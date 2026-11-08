@@ -74,3 +74,13 @@ Map adventure with turn-based battles · modern colourful pixel art · strong sa
 - Walking on web uses CSS transitions (compositor) for camera and player; d-pad/A/B/MENU use delayPressIn=0 (quick taps were ignored before).
 - Detailed tiles: terracotta coppi roofs, plaster walls with green shutters, arched doors, varied bricks, cobblestones, portico arches, water depth, soft shadows under tall tiles.
 - UI: Logo component (gold outline + red ribbon) on title, button shine, card-style scrollable game menu, dialog name tab. Title background is the original pixel-art Emilia-Romagna panorama (TitleScene.tsx).
+
+## Iteration 11 (2026-06): interiors and unique NPC looks
+- New indoor tiles in TileArt: L wood floor, K oak barrel, M market stall (awning + produce crate), N indoor wall (wainscot, shelves, painting), V red carpet. K, M and N block movement. Acetaia and Mercato are now full 16x16 rooms with no black void; their exit moved to (7,15) and you enter at (7,14).
+- NPC_SPRITES (expansion.ts): each capopalestra has its own drawing (umarell, contessa, duchessa, camionista, nonna, pilota, romeo, aceto, teodora). Shopkeepers wear an apron, a baker's hat or a straw hat, coloured by their look.
+- Side walls inside are stone pilasters (J, blocking). Shopkeepers now use 6 outfits (apron, baker, straw hat, bandana, moustache+vest, glasses+long hair). The Fruttivendola moved in front of her stall (3,6).
+
+## Iteration 12 (Jun 2026)
+- Giorno/Notte in tempo reale (alba 5-8, giorno 8-18, tramonto 18-21, notte 21-5) su mappe esterne; interni (acetaia, mercato) sempre illuminati. File: src/game/Alive.tsx
+- Mostrelli animati: respiro + saltello in Battle e LiveBattle; NPC respirano sulla mappa.
+- Backlog: Apple Sign-In da verificare su build nativa.

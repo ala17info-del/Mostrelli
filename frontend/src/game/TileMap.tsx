@@ -4,6 +4,8 @@ import { Platform, StyleSheet, View } from "react-native";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from "react-native-reanimated";
 
 import { GameMap, ITEMS } from "./data";
+import { NPC_SPRITES } from "./expansion";
+import { Breathe, DayNightOverlay } from "./Alive";
 import { PixelSprite } from "./PixelSprite";
 import { ANIMATED_TILES, TileArt } from "./TileArt";
 import { PixelText } from "./ui";
@@ -24,8 +26,10 @@ type Props = {
 // The whole map is drawn once (memoised). Walking only moves the camera and the player with
 // native-driven transforms, so a step never re-renders the 256 tiles.
 const WEB = Platform.OS === "web";
+// Interiors stay lit; everything else follows the real clock.
+const INDOOR = new Set(["acetaia", "mercato"]);
 // Tall things (trees, roofs, walls) cast a soft shadow on the ground tile just below them.
-const TALL = new Set(["T", "R", "H", "B", "D"]);
+const TALL = new Set(["T", "R", "H", "B", "D", "N", "K", "M"]);
 const Ground = memo(function Ground({ map, size, phase }: { map: GameMap; size: number; phase: number }) {
   return (
     <>
@@ -58,7 +62,9 @@ const Actors = memo(function Actors({ map, size, defeated, picked }: { map: Game
         return (
           <View key={npc.id} style={[st.actor, { left: npc.x * size, top: npc.y * size, width: size, height: size }]} testID={`npc-${npc.id}`}>
             <View style={[st.shadow, { width: size * 0.7, height: size * 0.18, left: size * 0.15, top: size * 0.82 }]} />
-            <PixelSprite name="person" size={size} look={npc.look} />
+            <Breathe size={size} hop={false} amount={0.6} delay={((npc.x * 7 + npc.y * 3) % 10) * 110}>
+              <PixelSprite name={NPC_SPRITES[npc.id] ?? "person"} size={size} look={npc.look} />
+            </Breathe>
             {(npc.kind === "heal" || npc.kind === "shop") && (
               <View style={[st.badge, { top: -size * 0.42, backgroundColor: npc.kind === "heal" ? "#2e7d32" : "#fbc02d" }]} testID={`marker-${npc.kind}-${npc.id}`}>
                 <MaterialDesignIcons name={npc.kind === "heal" ? "heart-plus" : "cart"} size={11} color={npc.kind === "heal" ? "#ffffff" : "#1a1a1a"} />
@@ -158,6 +164,7 @@ export function TileMap({ map, px, py, dir, cols, rows, size, defeated, picked, 
           <Player dir={dir} frame={frame} size={size} />
         </Animated.View>
       </Animated.View>
+      {!INDOOR.has(map.id) && <DayNightOverlay />}
     </View>
   );
 }

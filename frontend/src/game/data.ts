@@ -129,7 +129,7 @@ export const ITEMS = {
 } as const;
 export type ItemId = keyof typeof ITEMS;
 
-export const BLOCKING = new Set(["T", "W", "R", "H", "D", "B", "S", "O", "U", "X"]);
+export const BLOCKING = new Set(["T", "W", "R", "H", "D", "B", "S", "O", "U", "X", "K", "M", "N", "J"]);
 export const ENCOUNTER_TILES = new Set(["G", "Q"]);
 
 export type Npc = {

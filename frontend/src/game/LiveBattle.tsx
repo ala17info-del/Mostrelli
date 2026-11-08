@@ -13,6 +13,7 @@ import { FX_LABEL, ITEMS, ItemId, MAPS, MOVES, Npc, SPECIES, TYPES } from "./dat
 import { DLine, initDuel, LiveAct, other, resolveTurn, Side, TurnEntry } from "./duelEngine";
 import { knownMoves, makeMon, Mon, monName, stats } from "./engine";
 import { useGame } from "./GameContext";
+import { Breathe } from "./Alive";
 import { battleSize, PixelSprite } from "./PixelSprite";
 import { hap, HpBar, PixelText, RetroButton } from "./ui";
 
@@ -164,7 +165,7 @@ export function LiveBattle({ live, setLive, onExit }: { live: Live; setLive: (l:
           <Info mon={foe} hp={ehp} owner={names[foeSide]} testID="live-foe-info" />
           <View style={styles.spriteWrap}>
             <View style={styles.ground} />
-            <PixelSprite name={foe.s} size={battleSize(foe.s, 104)} testID="live-foe-sprite" />
+            <Breathe size={battleSize(foe.s, 104)}><PixelSprite name={foe.s} size={battleSize(foe.s, 104)} testID="live-foe-sprite" /></Breathe>
             {fxOn(foeSide)}
           </View>
         </View>
@@ -180,7 +181,7 @@ export function LiveBattle({ live, setLive, onExit }: { live: Live; setLive: (l:
         <View style={styles.row}>
           <View style={styles.spriteWrap}>
             <View style={styles.ground} />
-            <PixelSprite name={me.s} size={battleSize(me.s, 112)} flip testID="live-me-sprite" />
+            <Breathe size={battleSize(me.s, 112)} delay={550}><PixelSprite name={me.s} size={battleSize(me.s, 112)} flip testID="live-me-sprite" /></Breathe>
             {fxOn(side)}
           </View>
           <Info mon={me} hp={php} owner="Tu" showHp testID="live-me-info" />

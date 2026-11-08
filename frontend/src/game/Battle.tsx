@@ -10,6 +10,7 @@ import { sfx, SfxName } from "./audio";
 import { FX_LABEL, ITEMS, ItemId, MOVES, SPECIES, TypeId, TYPES } from "./data";
 import { HealFx, HitFx } from "./BattleFx";
 import { applyItem, attack, stageMult, catchChance, gainXp, knownMoves, Mon, monName, stats, xpReward } from "./engine";
+import { Breathe } from "./Alive";
 import { battleSize, PixelSprite } from "./PixelSprite";
 import { hap, HpBar, PixelText } from "./ui";
 
@@ -423,7 +424,7 @@ export function Battle({ setup, party: initialParty, items, onEnd }: { setup: Ba
           <View style={styles.spriteWrap}>
             <View style={[styles.ground, setup.field === "beach" && styles.groundBeach]} />
             <Animated.View style={bobFoe}>
-              <PixelSprite name={foe.s} size={battleSize(foe.s, 112)} testID="battle-enemy-sprite" />
+              <Breathe size={battleSize(foe.s, 112)}><PixelSprite name={foe.s} size={battleSize(foe.s, 112)} testID="battle-enemy-sprite" /></Breathe>
             </Animated.View>
             {fxShow?.target === "foe" && <HitFx key={fxShow.k} type={fxShow.type} dmg={fxShow.dmg} crit={fxShow.crit} eff={fxShow.eff} />}
           </View>
@@ -432,7 +433,7 @@ export function Battle({ setup, party: initialParty, items, onEnd }: { setup: Ba
           <View style={styles.spriteWrap}>
             <View style={[styles.ground, setup.field === "beach" && styles.groundBeach]} />
             <Animated.View style={bobMe}>
-              <PixelSprite name={showing?.ps ?? me.s} size={battleSize(showing?.ps ?? me.s, 120)} flip testID="battle-player-sprite" />
+              <Breathe size={battleSize(showing?.ps ?? me.s, 120)} delay={550}><PixelSprite name={showing?.ps ?? me.s} size={battleSize(showing?.ps ?? me.s, 120)} flip testID="battle-player-sprite" /></Breathe>
             </Animated.View>
             {fxShow?.target === "me" && <HitFx key={fxShow.k} type={fxShow.type} dmg={fxShow.dmg} crit={fxShow.crit} eff={fxShow.eff} />}
           </View>

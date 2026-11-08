@@ -1,0 +1,28 @@
+{
+  "summary": "Frontend-only test on a mobile viewport (390x844, touch via CDP). Mercato di Mezzo and Acetaia Ducale: entry from Bologna (2,5) and Modena (12,2), full-screen render with no black area (9x13 tile viewport over the 16x16 maps), stall, barrel, wall and NPC blocking, walkable carpet, pickups, exits back to Bologna (2,6) and Modena (12,3), and re-entry all pass. Fruttivendola dialog leads to the shop modal, the Venditore di Tigelle dialog works, and the Ferruccio boss dialog starts. New boss and shop sprites render in Bologna, Mercato, Acetaia, Riviera and Parma with no blank or broken sprites. No page or console errors.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Mercato / Acetaia", "issues": ["The side walls (x=0 and x=15) use the same south-facing 'N' tile as the top wall, so the left and right edges look like stacked shelves and wainscot instead of a side wall. A side-wall variant would look more realistic.", "The Fruttivendola (3,4) stands on the north side of the stall row at y=5, while the awning faces south, so the player shops from behind the stall. Moving her below the stall (for example to y=6) would read better."]},
+      {"screen": "NPC looks", "issues": ["Shopkeepers share 3 templates: shop_apron (bo_bottega, cs_farmacia, cm_ferramenta, mo_salumiere), shop_straw (al_banco, ri_ambulante, ra_mosaicista, me_fruttivendola) and shop_baker (fe_fornaio, pa_casaro). Only the A/C colours differ, so the look is not fully unique per town, which the user asked for. Bosses each have their own sprite (OK)."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/save_tool.py"],
+  "action_items": [
+    "LOW (optional): Add more shopkeeper templates (or per-NPC accessories) so that every shopkeeper is unique, as requested.",
+    "LOW (optional): Add a side-wall tile for interior x=0 and x=15. Place the Fruttivendola south of her stall."
+  ],
+  "critical_code_review_comments": [
+    "The interior 'heal' coordinates (mercato 2,6 and acetaia 3,7) are only used if the player heals there. There are no healers inside, so they are unused (harmless).",
+    "All NPC_SPRITES ids map to existing NPCs and sprites. All new sprite grids are square (12x12). Both interior maps are 16x16 and every exit, NPC and pickup sits on a walkable tile."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (unchanged)", "frontend": "100% of the requested flows pass; only minor design notes"},
+  "seed_data_creation": "No new users. Reused TEST_ user test_it9_uih_90d59@example.com. Its defeated/picked lists were reset for the test, and it is now left at bologna x2 y8, with picked = [me_brodini, ac_caramella] and defeated = [].",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Use browser.new_context(has_touch=True, is_mobile=True) and CDP Input.dispatchTouchEvent (60ms hold = 1 step). Read the player tile from DOMMatrix(getComputedStyle(player-sprite).transform) divided by the tile size (43px at 390 width). Patch the save via page.request (login, then GET/PUT /api/save). Mercato route: spawn (7,14), up 2, left 2, up 3 (carpet 5,9), left 4 (pickup 1,9). Acetaia: spawn (7,14), up 8 to (7,6), right 1, up 3 to (8,3), facing the boss."
+}

@@ -1,0 +1,26 @@
+{
+  "summary": "Frontend-only test of the Day/Night lighting and Breathe animations on a mobile viewport (390x844, touch via CDP). Everything requested passes. Login and continue work. The tile map renders. The DayNightOverlay testID matches the forced hour at every phase boundary: 4h and 21h notte, 23h notte, 5h and 6h alba, 8h giorno, 12h giorno (set with page.clock.set_fixed_time), 18h and 19h tramonto. The overlay covers the whole tile-map (387x559) and has pointer-events:none. Its tint colours are as specified: notte rgba(12,22,80,0.48) plus an 18px vignette, tramonto orange, giorno with no tint child. Screenshots confirm the tint is visible. The D-pad still moves the player (one step takes about 220ms), the map runs at about 60fps in headless rAF, and the Balanzone NPC still blocks movement and opens its dialog when A is pressed. Mercato di Mezzo (from Bologna 2,5) and Acetaia Ducale (from Modena 12,2) show no overlay, and the overlay comes back after leaving either one. Map NPCs (5 in Bologna, 4 in Modena) render, and their Breathe transform changes over time. In a wild battle (Umarellino, started by walking in Bologna grass), battle-enemy-sprite and battle-player-sprite render. Their Breathe parent changes scaleX/scaleY/translateY across samples, including a hop of about 16px. Lotta then a move dealt damage both ways and returned to the menu; Fuga returned to the map with the overlay intact and walking still working. No console or page errors. The LiveBattle sprites were only code-reviewed because they need a two-player room. No deprecated Expo packages found.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Map (notte)", "issues": ["The night vignette is a solid 18px border (rgba(0,0,20,0.25)) with a hard edge, not a soft gradient. It reads as a dark frame around the map. A radial or linear gradient would look nicer. Optional."]},
+      {"screen": "Map (phase change)", "issues": ["The phase change is instant when the minute check crosses an hour boundary; there is no fade. Optional: animate the tint opacity."]},
+      {"screen": "Battle", "issues": ["Battles are never tinted, even at night. Optional: apply a light tint to the battle background so it matches the time of day."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/save_helper.py", "/app/.screenshots/n23.jpg", "/app/.screenshots/n19.jpg", "/app/.screenshots/n12.jpg", "/app/.screenshots/notte_mercato.jpg", "/app/.screenshots/battle.jpg", "/app/.screenshots/battle_after_move.jpg"],
+  "action_items": ["None blocking. Optional polish: soft-gradient night vignette, a fade between phases, and a time-of-day tint in battles."],
+  "critical_code_review_comments": [
+    "Alive.tsx: each DayNightOverlay instance starts its own 60s setInterval. That is fine for one overlay, but if more overlays are added, move the timer into a shared hook or context.",
+    "The autosave is debounced by 2.5s (GameContext). The last steps are lost if the tab is killed right after moving. This is existing behaviour, not a regression."
+  ],
+  "updated_files": ["/app/backend/tests/save_helper.py (new test helper: backup, patch and restore the test user's save)"],
+  "success_rate": {"backend": "N/A", "frontend": "100%"},
+  "seed_data_creation": "None. The test@bologna.it save was temporarily patched to bologna(2,7), bologna(13,12) and modena(12,3), then restored to the original state (bologna 7,7, hp 19).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Force the hour with ctx.add_init_script('Date.prototype.getHours=function(){return H}'), or use page.clock.set_fixed_time, which keeps timers and animations running. Do not use clock.install. The overlay testID is daynight-<phase> and sits inside tile-map. Battle Breathe: read getComputedStyle(battle-enemy-sprite.parentElement).transform. To get a wild battle quickly, set the save to bologna (13,12) and alternate right and left; the encounter rate is 10% per step. Back up the save with /app/backend/tests/save_helper.py backup|set map x y|restore."
+}
