@@ -16,7 +16,7 @@ export const TitleScene = memo(function TitleScene() {
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none" testID="title-scene">
       <LinearGradient colors={["#2b1d4e", "#c8507a", "#f4a259", "#fde2a6"]} locations={[0, 0.35, 0.55, 0.7]} style={StyleSheet.absoluteFill} />
-      <View style={B(68, 22, 14, 7, "#ffe9a8", { borderRadius: 999 })} />
+      <View style={B(76, 34, 12, 6, "#ffe9a8", { borderRadius: 999 })} />
       {[[10, 10], [24, 6], [52, 12], [86, 8], [40, 4]].map(([l, t], i) => <View key={i} style={B(l, t, 0.8, 0.4, "#fff6d8")} />)}
       {HILLS.map(([l, t, w, h, c], i) => <View key={i} style={B(l, t, w, h, c, { borderTopLeftRadius: 999, borderTopRightRadius: 999 })} />)}
       {/* vineyard rows on the hills */}
@@ -28,9 +28,9 @@ export const TitleScene = memo(function TitleScene() {
       {/* poplars along the plain */}
       {[6, 14, 22, 88, 94].map((l, i) => <View key={`p${i}`} style={B(l, 50, 2.4, 10, "#3f6b2a", { borderRadius: 999 })} />)}
       {/* medieval town: tower, porticoes, red roofs */}
-      <View style={B(30, 36, 6, 26, "#b5562f")} />
-      <View style={B(29, 34, 8, 3, "#7a2519")} />
-      <View style={B(31.5, 40, 3, 3, "#3e2a20")} />
+      <View style={B(30, 42, 6, 20, "#b5562f")} />
+      <View style={B(29, 40, 8, 3, "#7a2519")} />
+      <View style={B(31.5, 45, 3, 3, "#3e2a20")} />
       <View style={B(18, 52, 40, 9, "#d07a4c")} />
       <View style={B(16, 49, 44, 4, "#a83a2a")} />
       {Array.from({ length: 8 }).map((_, i) => <View key={`a${i}`} style={B(19 + i * 4.8, 56, 3, 5, "#5e2414", { borderTopLeftRadius: 99, borderTopRightRadius: 99 })} />)}

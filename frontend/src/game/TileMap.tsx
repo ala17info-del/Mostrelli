@@ -1,6 +1,6 @@
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
 import React, { memo, useEffect, useRef, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from "react-native-reanimated";
 
 import { GameMap, ITEMS } from "./data";
@@ -23,6 +23,9 @@ type Props = {
 
 // The whole map is drawn once (memoised). Walking only moves the camera and the player with
 // native-driven transforms, so a step never re-renders the 256 tiles.
+const WEB = Platform.OS === "web";
+// Tall things (trees, roofs, walls) cast a soft shadow on the ground tile just below them.
+const TALL = new Set(["T", "R", "H", "B", "D"]);
 const Ground = memo(function Ground({ map, size, phase }: { map: GameMap; size: number; phase: number }) {
   return (
     <>
@@ -30,7 +33,7 @@ const Ground = memo(function Ground({ map, size, phase }: { map: GameMap; size: 
         <View key={y} style={st.row}>
           {row.split("").map((ch, x) => (
             <View key={x} style={{ width: size, height: size }}>
-              <TileArt ch={ch} size={size} x={x} y={y} phase={ANIMATED_TILES.has(ch) ? phase : 0} />
+              <TileArt ch={ch} size={size} x={x} y={y} phase={ANIMATED_TILES.has(ch) ? phase : 0} shadow={!TALL.has(ch) && TALL.has(map.tiles[y - 1]?.[x] ?? "")} />
             </View>
           ))}
         </View>
@@ -113,6 +116,13 @@ export function TileMap({ map, px, py, dir, cols, rows, size, defeated, picked, 
   const bob = useSharedValue(0);
   const prev = useRef({ px, py, id: map.id, size });
   const [frame, setFrame] = useState(0);
+  const p0 = prev.current;
+  const jumpNow = p0.id !== map.id || p0.size !== size || Math.abs(px - p0.px) + Math.abs(py - p0.py) > 1;
+  // Browsers (iPhone Safari): let the compositor animate with CSS transitions instead of JS frames.
+  const webMove = (tx: number, ty: number) => ({
+    transform: [{ translateX: tx }, { translateY: ty }],
+    transitionProperty: "transform", transitionDuration: jumpNow ? "0ms" : `${stepMs}ms`, transitionTimingFunction: "linear", willChange: "transform",
+  }) as any;
   useEffect(() => {
     const p = prev.current;
     const jump = p.id !== map.id || p.size !== size || Math.abs(px - p.px) + Math.abs(py - p.py) > 1;
@@ -126,13 +136,14 @@ export function TileMap({ map, px, py, dir, cols, rows, size, defeated, picked, 
       return;
     }
     if (!moved) return;
+    setFrame((f) => f + 1);
+    if (WEB) return;
     const ease = { duration: stepMs, easing: Easing.linear };
     camX.value = withTiming(camTx, ease);
     camY.value = withTiming(camTy, ease);
     plX.value = withTiming(px * size, ease);
     plY.value = withTiming(py * size, ease);
     bob.value = withSequence(withTiming(-size * 0.06, { duration: stepMs / 2 }), withTiming(0, { duration: stepMs / 2 }));
-    setFrame((f) => f + 1);
   }, [px, py, map.id, size, stepMs, camTx, camTy, camX, camY, plX, plY, bob]);
   const camStyle = useAnimatedStyle(() => ({ transform: [{ translateX: camX.value }, { translateY: camY.value }] }));
   const plStyle = useAnimatedStyle(() => ({ transform: [{ translateX: plX.value }, { translateY: plY.value + bob.value }] }));
@@ -140,10 +151,10 @@ export function TileMap({ map, px, py, dir, cols, rows, size, defeated, picked, 
   const offY = Hh < rows ? Math.floor((rows - Hh) / 2) * size : 0;
   return (
     <View testID="tile-map" style={{ width: cols * size, height: rows * size, overflow: "hidden", backgroundColor: "#0b0b0b" }}>
-      <Animated.View style={[{ position: "absolute", left: offX, top: offY, width: W * size, height: Hh * size }, camStyle]}>
+      <Animated.View style={[{ position: "absolute", left: offX, top: offY, width: W * size, height: Hh * size }, WEB ? webMove(camTx, camTy) : camStyle]}>
         <Ground map={map} size={size} phase={phase} />
         <Actors map={map} size={size} defeated={defeated} picked={picked} />
-        <Animated.View style={[st.actor, { width: size, height: size }, plStyle]} testID="player-sprite">
+        <Animated.View style={[st.actor, { width: size, height: size }, WEB ? webMove(px * size, py * size) : plStyle]} testID="player-sprite">
           <Player dir={dir} frame={frame} size={size} />
         </Animated.View>
       </Animated.View>

@@ -9,7 +9,7 @@ import { useAuth } from "@/src/auth";
 import { useGame } from "@/src/game/GameContext";
 import { PixelSprite } from "@/src/game/PixelSprite";
 import { TitleScene } from "@/src/game/TitleScene";
-import { PixelText, RetroButton } from "@/src/game/ui";
+import { Logo, PixelText, RetroButton } from "@/src/game/ui";
 import { colors } from "@/src/theme";
 
 
@@ -27,8 +27,7 @@ export default function Title() {
       <LinearGradient colors={["rgba(18,18,18,0.55)", "rgba(18,18,18,0.1)", "rgba(18,18,18,0.6)", colors.surface]} locations={[0, 0.35, 0.7, 1]} style={StyleSheet.absoluteFill} />
       <View style={[styles.content, { paddingTop: insets.top + 48 }]}>
         <Animated.View entering={FadeInUp.duration(500)}>
-          <PixelText style={styles.kicker}>— EMILIA-ROMAGNA EDITION —</PixelText>
-          <PixelText style={styles.title} testID="title-text">MOSTRELLI</PixelText>
+          <Logo size={44} ribbon="EMILIA-ROMAGNA EDITION" />
           <PixelText style={styles.sub}>Colline, pianura, nebbia e Riviera: un'avventura di mostrelli golosi in tutta l'Emilia-Romagna.</PixelText>
         </Animated.View>
         <Animated.View entering={FadeInUp.delay(200).duration(500)} style={styles.sprites}>

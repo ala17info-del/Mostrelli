@@ -41,8 +41,33 @@ export function RetroButton({ label, onPress, variant = "primary", testID, disab
         style,
       ]}
     >
+      <View pointerEvents="none" style={styles.shine} />
       <Text style={[styles.label, { color: fg }, small && { fontSize: 12 }]}>{label}</Text>
     </Pressable>
+  );
+}
+
+// Game logo: gold letters with a thick dark outline and a red drop shadow, plus a ribbon.
+export function Logo({ size = 44, ribbon }: { size?: number; ribbon?: string }) {
+  const t = "MOSTRELLI";
+  const o = Math.max(2, Math.round(size / 14));
+  const base = { fontFamily: FONT, fontSize: size, lineHeight: size * 1.2, letterSpacing: 2 };
+  const ring: [number, number][] = [[-o, 0], [o, 0], [0, -o], [0, o], [-o, -o], [o, o], [-o, o], [o, -o]];
+  return (
+    <View style={{ alignSelf: "flex-start" }}>
+      <View>
+        <Text style={[base, { position: "absolute", left: o * 1.5, top: o * 1.5, color: "#c0392b" }]}>{t}</Text>
+        {ring.map(([x, y], i) => (
+          <Text key={i} style={[base, { position: "absolute", left: x, top: y, color: "#1a0f08" }]}>{t}</Text>
+        ))}
+        <Text testID="title-text" style={[base, { color: "#ffd54f" }]}>{t}</Text>
+      </View>
+      {ribbon && (
+        <View style={styles.ribbon}>
+          <Text style={styles.ribbonTxt}>{ribbon}</Text>
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -81,6 +106,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 4,
   },
   small: { minHeight: 44, paddingHorizontal: 12 },
+  shine: { position: "absolute", left: 2, right: 2, top: 2, height: 3, backgroundColor: "rgba(255,255,255,0.35)" },
+  ribbon: { marginTop: 6, alignSelf: "flex-start", backgroundColor: "#c0392b", borderWidth: 2, borderColor: "#1a0f08", paddingHorizontal: 10, paddingVertical: 3, transform: [{ rotate: "-2deg" }] },
+  ribbonTxt: { fontFamily: FONT, fontSize: 11, color: "#ffffff", letterSpacing: 2 },
   label: { fontFamily: FONT, fontSize: 15, letterSpacing: 1, textTransform: "uppercase" },
   hpOuter: { height: 8, backgroundColor: colors.surfaceTertiary, borderWidth: 1, borderColor: colors.borderStrong, overflow: "hidden" },
 });

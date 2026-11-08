@@ -4,7 +4,7 @@ import { View, ViewStyle } from "react-native";
 // Richer pixel tiles. Colors are fixed pixel-art content (same in any theme).
 const hash = (x: number, y: number) => ((x * 73856093) ^ (y * 19349663)) >>> 0;
 
-type P = { ch: string; size: number; x: number; y: number; phase: number };
+type P = { ch: string; size: number; x: number; y: number; phase: number; shadow?: boolean };
 
 // Warmer, more saturated handheld-style palette applied on top of the original tile colours.
 const REMAP: Record<string, string> = {
@@ -53,7 +53,7 @@ function Sand({ s, hv }: { s: number; hv: number }) {
   );
 }
 
-function TileArtBase({ ch, size: s, x, y, phase }: P) {
+function TileArtBase({ ch, size: s, x, y, phase, shadow }: P) {
   const u = s / 8;
   const hv = hash(x, y);
   const base: Record<string, string> = {
@@ -139,34 +139,53 @@ function TileArtBase({ ch, size: s, x, y, phase }: P) {
       );
       break;
     case "C":
+      // Cobblestones: rounded stones with light top and shaded bottom.
       inner = (
         <>
-          <Px l={0} t={u * 3.8} w={s} h={u * 0.4} c="#9c8a72" />
-          <Px l={0} t={u * 7.6} w={s} h={u * 0.4} c="#9c8a72" />
-          <Px l={u * 3.8} t={0} w={u * 0.4} h={u * 4} c="#9c8a72" />
-          <Px l={(y % 2 ? 1.8 : 5.8) * u} t={u * 4} w={u * 0.4} h={u * 4} c="#9c8a72" />
-          <Px l={u * 0.5} t={u * 0.5} w={u * 2} h={u * 0.5} c="#cbbba3" />
+          {[0, 1, 2].map((j) =>
+            [0, 1, 2].map((i) => {
+              const v = hash(x * 3 + i, y * 3 + j) % 3;
+              const l = (i * 2.7 + (j % 2 ? 0.6 : 0.1)) * u, t = (j * 2.7 + 0.2) * u;
+              return (
+                <React.Fragment key={`${i}${j}`}>
+                  <Px l={l} t={t} w={u * 2.3} h={u * 2.3} c={["#b8a68e", "#c4b39a", "#ab9a82"][v]} r={u * 0.8} />
+                  <Px l={l + u * 0.4} t={t + u * 0.3} w={u * 1.2} h={u * 0.4} c="#dacbb4" />
+                  <Px l={l + u * 0.3} t={t + u * 1.8} w={u * 1.7} h={u * 0.4} c="#8f7f68" />
+                </React.Fragment>
+              );
+            }),
+          )}
         </>
       );
       break;
     case "P":
+      // Portico arch: pillars with capitals, shaded vault and lit floor.
       inner = (
         <>
-          <Px l={0} t={0} w={s} h={u * 1.2} c="#c96a40" />
-          <Px l={u * 1.5} t={u * 2} w={u * 5} h={u * 6} c="#6e2e17" r={u * 2.5} />
-          <Px l={u * 1.5} t={u * 5} w={u * 5} h={u * 3} c="#6e2e17" />
-          <Px l={u * 0.3} t={u * 1.2} w={u * 1.2} h={u * 6.8} c="#d07a4c" />
-          <Px l={u * 2} t={u * 7} w={u * 4} h={u} c="#8a6a50" />
+          <Px l={0} t={0} w={s} h={u * 1.3} c="#d98a5c" />
+          <Px l={0} t={u * 1.1} w={s} h={u * 0.3} c="#a85a34" />
+          <Px l={u * 1.4} t={u * 1.6} w={u * 5.2} h={u * 6.4} c="#4a1f10" r={u * 2.6} />
+          <Px l={u * 1.4} t={u * 4.5} w={u * 5.2} h={u * 3.5} c="#4a1f10" />
+          <Px l={u * 1.9} t={u * 3} w={u * 4.2} h={u * 5} c="#6e2e17" r={u * 2} />
+          <Px l={u * 1.9} t={u * 6.6} w={u * 4.2} h={u * 1.4} c="#9a7a5a" />
+          <Px l={u * 0.1} t={u * 1.4} w={u * 1.3} h={u * 6.6} c="#d07a4c" />
+          <Px l={u * 6.6} t={u * 1.4} w={u * 1.3} h={u * 6.6} c="#c06a3e" />
+          <Px l={0} t={u * 1.4} w={u * 1.6} h={u * 0.5} c="#e8a070" />
+          <Px l={u * 6.4} t={u * 1.4} w={u * 1.6} h={u * 0.5} c="#e8a070" />
+          <Px l={u * 0.3} t={u * 2} w={u * 0.3} h={u * 6} c="#e8a070" />
         </>
       );
       break;
     case "W":
     case "O": {
       const off = phase ? u * 2 : 0;
+      const hi = ch === "O" ? "#7fd3e6" : "#8fd3d3";
       inner = (
         <>
-          <Px l={u + off} t={u * 2} w={u * 3} h={u * 0.6} c={ch === "O" ? "#7fd3e6" : "#8fd3d3"} />
-          <Px l={u * 4 - off} t={u * 5.5} w={u * 3} h={u * 0.6} c={ch === "O" ? "#7fd3e6" : "#8fd3d3"} />
+          <Px l={0} t={u * 5} w={s} h={u * 3} c={ch === "O" ? "#17607a" : "#237a7a"} />
+          <Px l={u + off} t={u * 2} w={u * 3} h={u * 0.6} c={hi} />
+          <Px l={u * 1.5 + off} t={u * 1.5} w={u * 2} h={u * 0.5} c="#d8f6ff" />
+          <Px l={u * 4 - off} t={u * 5.5} w={u * 3} h={u * 0.6} c={hi} />
           {ch === "O" && hv % 4 === 0 && <Px l={u * 6} t={u} w={u * 0.8} h={u * 0.8} c="#ffffff" />}
           <Px l={u * 2 + off / 2} t={u * 3.8} w={u * 0.5} h={u * 0.5} c="#b8ecef" />
           <Px l={u * 6 - off / 2} t={u * 7} w={u * 0.5} h={u * 0.5} c="#b8ecef" />
@@ -175,50 +194,82 @@ function TileArtBase({ ch, size: s, x, y, phase }: P) {
       break;
     }
     case "R":
-      inner = (
-        <>
-          {[0, 2, 4, 6].map((ty) => (
-            <Px key={ty} l={0} t={ty * u + u * 1.6} w={s} h={u * 0.4} c="#7a2519" />
-          ))}
-          {[0, 2, 4, 6].map((ty) => (
-            <Px key={`h${ty}`} l={((ty / 2) % 2 ? 1 : 4) * u} t={ty * u} w={u * 0.4} h={u * 1.6} c="#7a2519" />
-          ))}
-          <Px l={0} t={0} w={s} h={u * 0.5} c="#c4553f" />
-        </>
-      );
-      break;
-    case "H":
-      inner = (
-        <>
-          <Px l={u * 2} t={u * 1.5} w={u * 4} h={u * 4} c="#3a3a3a" />
-          <Px l={u * 2.4} t={u * 1.9} w={u * 3.2} h={u * 3.2} c="#8fb8b8" />
-          <Px l={u * 2.4} t={u * 1.9} w={u * 1.2} h={u * 1.2} c="#cfe6e6" />
-          <Px l={u * 0.8} t={u * 1.5} w={u * 1.2} h={u * 4} c="#2e6b3a" />
-          <Px l={u * 6} t={u * 1.5} w={u * 1.2} h={u * 4} c="#2e6b3a" />
-          <Px l={0} t={u * 7.4} w={s} h={u * 0.6} c="#c9b48c" />
-        </>
-      );
-      break;
-    case "D":
-      inner = (
-        <>
-          <Px l={u * 1.5} t={u * 1} w={u * 5} h={u * 7} c="#3e2a20" />
-          <Px l={u * 2} t={u * 1.5} w={u * 4} h={u * 6.5} c="#6d4c41" />
-          <Px l={u * 3.8} t={u * 1.5} w={u * 0.4} h={u * 6.5} c="#4e342e" />
-          <Px l={u * 4.6} t={u * 4.5} w={u * 0.7} h={u * 0.7} c="#fbc02d" />
-        </>
-      );
-      break;
-    case "B":
+      // Terracotta roof tiles (coppi) in staggered rows with light and shade.
       inner = (
         <>
           {[0, 2, 4, 6].map((ty) => (
             <React.Fragment key={ty}>
-              <Px l={0} t={ty * u + u * 1.7} w={s} h={u * 0.3} c="#5e2414" />
-              <Px l={((ty / 2) % 2 ? 2 : 5) * u} t={ty * u} w={u * 0.3} h={u * 1.7} c="#5e2414" />
+              <Px l={0} t={ty * u} w={s} h={u * 0.5} c="#d9704c" />
+              <Px l={0} t={ty * u + u * 1.55} w={s} h={u * 0.45} c="#6e2015" />
+              {[0, 2, 4, 6, 8].map((cx) => (
+                <Px key={cx} l={(cx - ((ty / 2) % 2)) * u} t={ty * u + u * 0.3} w={u * 0.35} h={u * 1.3} c="#8e321e" />
+              ))}
+              {[1, 5].map((cx) => (
+                <Px key={`s${cx}`} l={(cx - ((ty / 2) % 2) + 0.4) * u} t={ty * u + u * 0.6} w={u * 0.5} h={u * 0.3} c="#e8906c" />
+              ))}
             </React.Fragment>
           ))}
-          <Px l={u * 0.5} t={u * 0.3} w={u * 2} h={u * 0.5} c="#b0553a" />
+        </>
+      );
+      break;
+    case "H":
+      // Plaster wall with cornice, stone window frame and green shutters (persiane).
+      inner = (
+        <>
+          <Px l={0} t={0} w={s} h={u * 0.8} c="#c9b48c" />
+          <Px l={0} t={u * 0.8} w={s} h={u * 0.25} c="#a8946c" />
+          {hv % 3 === 0 && <Px l={((hv >> 3) % 6 + 1) * u} t={u * 6.2} w={u * 0.5} h={u * 0.4} c="#d8c7a0" />}
+          <Px l={u * 2.2} t={u * 1.6} w={u * 3.6} h={u * 4.2} c="#d8c8a8" />
+          <Px l={u * 2.6} t={u * 2} w={u * 2.8} h={u * 3.4} c="#4d7894" />
+          <Px l={u * 2.6} t={u * 2} w={u * 1.1} h={u * 1.2} c="#a9d2e8" />
+          <Px l={u * 3.9} t={u * 2} w={u * 0.25} h={u * 3.4} c="#d8c8a8" />
+          <Px l={u * 2.6} t={u * 3.6} w={u * 2.8} h={u * 0.25} c="#d8c8a8" />
+          <Px l={u * 0.6} t={u * 1.6} w={u * 1.5} h={u * 4.2} c="#2e6b3a" />
+          <Px l={u * 5.9} t={u * 1.6} w={u * 1.5} h={u * 4.2} c="#2e6b3a" />
+          {[2.3, 3.1, 3.9, 4.7].map((t) => (
+            <React.Fragment key={t}>
+              <Px l={u * 0.7} t={u * t} w={u * 1.3} h={u * 0.2} c="#1f4f2a" />
+              <Px l={u * 6} t={u * t} w={u * 1.3} h={u * 0.2} c="#1f4f2a" />
+            </React.Fragment>
+          ))}
+          <Px l={u * 2} t={u * 5.8} w={u * 4} h={u * 0.5} c="#b8a68e" />
+          <Px l={0} t={u * 7.2} w={s} h={u * 0.8} c="#b9a47c" />
+        </>
+      );
+      break;
+    case "D":
+      // Arched wooden door in a stone frame, with planks, knocker and a step.
+      inner = (
+        <>
+          <Px l={u * 1.2} t={u * 0.6} w={u * 5.6} h={u * 6.8} c="#c9b48c" r={u * 2.8} />
+          <Px l={u * 1.2} t={u * 3.5} w={u * 5.6} h={u * 3.9} c="#c9b48c" />
+          <Px l={u * 1.8} t={u * 1.2} w={u * 4.4} h={u * 6.2} c="#6d4c41" r={u * 2.2} />
+          <Px l={u * 1.8} t={u * 3.5} w={u * 4.4} h={u * 3.9} c="#6d4c41" />
+          {[2.8, 3.9, 5].map((l) => <Px key={l} l={u * l} t={u * 1.6} w={u * 0.25} h={u * 5.8} c="#4e342e" />)}
+          <Px l={u * 1.8} t={u * 1.4} w={u * 1} h={u * 0.4} c="#8d6e63" />
+          <Px l={u * 4.5} t={u * 4.3} w={u * 0.7} h={u * 0.7} c="#fbc02d" r={u} />
+          <Px l={u * 0.8} t={u * 7.3} w={u * 6.4} h={u * 0.7} c="#9c8a72" />
+          <Px l={u * 0.8} t={u * 7.3} w={u * 6.4} h={u * 0.2} c="#cbbba3" />
+        </>
+      );
+      break;
+    case "B":
+      // Brick wall: staggered bricks with varied tones and mortar.
+      inner = (
+        <>
+          <Px l={0} t={0} w={s} h={s} c="#5e2414" />
+          {[0, 2, 4, 6].map((ty) =>
+            [-1, 2, 5, 8].map((bx) => {
+              const l = (bx + ((ty / 2) % 2 ? 1.5 : 0)) * u;
+              const v = hash(x * 5 + bx + 2, y * 4 + ty) % 3;
+              return (
+                <React.Fragment key={`${ty}${bx}`}>
+                  <Px l={l + u * 0.15} t={ty * u + u * 0.15} w={u * 2.7} h={u * 1.7} c={["#9a4428", "#8d3b23", "#a8502f"][v]} />
+                  <Px l={l + u * 0.15} t={ty * u + u * 0.15} w={u * 2.7} h={u * 0.3} c="#b8603e" />
+                </React.Fragment>
+              );
+            }),
+          )}
         </>
       );
       break;
@@ -259,7 +310,18 @@ function TileArtBase({ ch, size: s, x, y, phase }: P) {
       );
       break;
   }
-  return <View style={{ width: s, height: s, backgroundColor: bg, overflow: "hidden" }}>{inner}</View>;
+  return (
+    <View style={{ width: s, height: s, backgroundColor: bg, overflow: "hidden" }}>
+      {(ch === "," || ch === "F") && (x + y) % 2 === 0 && <Px l={0} t={0} w={s} h={s} c="rgba(255,255,255,0.05)" />}
+      {inner}
+      {shadow && (
+        <>
+          <Px l={0} t={0} w={s} h={u * 1.2} c="rgba(20,10,0,0.28)" />
+          <Px l={0} t={u * 1.2} w={s} h={u * 0.6} c="rgba(20,10,0,0.12)" />
+        </>
+      )}
+    </View>
+  );
 }
 
 export const TileArt = memo(TileArtBase);

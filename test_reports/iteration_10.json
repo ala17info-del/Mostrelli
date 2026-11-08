@@ -1,0 +1,35 @@
+{
+  "summary": "Iteration 10 was frontend-only: walking smoothness (CSS transitions), interaction, menu, new tile art, logo and title, plus regressions. Tested at 390x844 (and 375x667) with mouse and with CDP touch in a has_touch/is_mobile context. PASS: on web, player-sprite and its camera parent both get transform plus transition-property:transform, duration 0.17s (0.11s when running), linear timing and will-change:transform. A rAF frame log while holding the d-pad showed even per-frame motion (about 4.2 px/frame walking, about 6.5 px/frame running) with no frame jumps above 12px other than map changes. After a 2.6s hold (16 steps, Bologna to Modena), the final position was grid-aligned (215 = 5x43). Bologna west exit to Modena jumps instantly in one frame (48 to 602px, 0ms transition), with no slide, and the Modena east exit back to Bologna also works. Run (B) toggles the toast and hint, and the transition is 110ms. A talks to Rezdora Iole: the dialog shows the speaker name tab, and advancing it heals ('Squadra curata!'). The menu sheet shows 10 card-style items, each 52px high. Squadra, Mostrario, Mappa, Stanze Online, Sfida and Zaino all open their screens and go back. Salva ora shows 'Partita salvata!'. Mappa now lists Modena, Parma, Ravenna, Acetaia and Mercato. Bologna and Modena screenshots show terracotta roofs, walls with green shutters, arched doors, brick, cobblestones, portico arches and the soft tree/building shadows, with no blank tiles and no page errors. Title: logo shows gold MOSTRELLI with a dark outline, the red ribbon 'EMILIA-ROMAGNA EDITION' and title-text (text MOSTRELLI); title-scene is present; buttons have a top shine. Regression: a wild battle (Mortazzone Lv4) started in Bologna tall grass. Body and d-pad computed user-select is none, and selectstart and contextmenu are preventDefault-ed. BUG FOUND AND FIXED (HIGH, likely part of the user's 'choppy' complaint): quick taps on the d-pad were dropped. react-native-web's PressResponder delays onPressIn by DEFAULT_PRESS_DELAY_MS=50. If the press is released earlier, it only activates when an onPress handler exists, and DBtn has only onPressIn/onPressOut. Measured with touch: taps of 0, 20, 40 and 70ms never moved the player; only about 120ms and longer worked; page.click also did nothing. Every hold also had about 50ms of input lag. Fix applied: delayPressIn={0} on the DBtn Pressable (app/game.tsx:376). Re-tested: taps of 0, 20, 40 and 70ms all move one tile, and holding still walks continuously.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "DBtn d-pad (app/game.tsx:376)", "issue": "FIXED BY TESTER: quick taps under about 100ms were ignored on web/touch, and holds had about 50ms of lag, because of react-native-web's 50ms default press-in delay combined with no onPress. Added delayPressIn={0}. Verified with CDP touch taps of 0-70ms.", "testID": "dpad-left", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Title (index.tsx / ui.tsx Logo)", "issues": ["The red drop-shadow copy of MOSTRELLI is offset about 7.5px down and shows as a red 'ghost' line under the gold letters. It reads more like a rendering glitch than a shadow; consider a smaller offset (about o*1.5) or a darker red.", "On 375x667 and 390x844, the three mostrelli sprites overlap the Ghirlandina tower in the title-scene, and the subtitle text runs over the moon. Busy, but readable."]},
+      {"screen": "Game menu sheet", "issues": ["The 10 items take about 575px with no ScrollView. On 375x667 the sheet spans y=77 to 651, so it only just fits. On devices with larger safe-area insets or larger text, the top items would be pushed off-screen. Wrap the items in a ScrollView with a maxHeight."]},
+      {"screen": "Map change", "issues": ["About 220ms frame hitch at each exit while the new map's 256 tiles (multi-View TileArt) mount. This is acceptable, but it is the one remaining visible stall."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/save_tool.py"],
+  "action_items": [
+    "Keep the delayPressIn={0} fix on the DBtn Pressable (game.tsx:376). Consider adding it to the A, B and MENU Pressables too, to remove their 50ms press-feedback lag.",
+    "LOW: Reduce the logo's red shadow offset so it does not look like a duplicated line.",
+    "LOW: Make the menu sheet scrollable (ScrollView with maxHeight) for small screens.",
+    "LOW (optional): Soften the map-change hitch, e.g. a short fade or pre-rendering the next map."
+  ],
+  "critical_code_review_comments": [
+    "TileMap.tsx: jumpNow is computed during render from prev.current, which the effect updates after commit. This is correct: the exit render gets 0ms, and later renders at the same position do not animate. Verified in the frame log.",
+    "TileMap.tsx: the 900ms phase interval re-renders Ground and all animated tiles (G/W/O/Q) on web while walking. No measurable stall was seen headless, but watch it on low-end iPhones.",
+    "In game.tsx the hold interval keeps the run speed it started with: toggling B while holding changes stepMs but not the setInterval period until the next press, so the speeds briefly mismatch.",
+    "The Expo log shows 'Failed to load font MaterialDesignIcons ... timed out after 12000ms' once (an intermittent font fetch timeout), and 'Cannot find single active touch' (an artefact of the CDP touchEnd with empty touchPoints)."
+  ],
+  "updated_files": ["/app/frontend/app/game.tsx (DBtn: added delayPressIn={0})"],
+  "success_rate": {"backend": "not tested (unchanged)", "frontend": "about 95%: all requested flows pass after the d-pad tap fix; only minor design notes remain"},
+  "seed_data_creation": "No new users. Reused TEST_ user test_it9_uih_90d59@example.com (secret123) and moved it via PUT /api/save. It was left at bologna x2 y8. No seeded or real data was modified.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "To test touch input, use browser.new_context(has_touch=True, is_mobile=True) and CDP Input.dispatchTouchEvent (touchStart, then touchEnd). page.click on the d-pad does not register, because there is no onPress (only onPressIn). To measure smoothness, use a rAF logger that reads DOMMatrix(getComputedStyle(player-sprite).transform) and its parentElement (the camera). The tile size is 43px at 390 width. Bologna (7,8): right is blocked. Bologna (13,12) to (13,14) is tall grass for encounters. Modena (2,7) facing up is the healer."
+}

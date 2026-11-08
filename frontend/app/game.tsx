@@ -1,7 +1,7 @@
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
 import { Redirect, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
-import { LayoutChangeEvent, Modal, Pressable, StyleSheet, View } from "react-native";
+import { LayoutChangeEvent, Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import Animated, { FadeIn, FadeInDown, FadeOut } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -310,16 +310,16 @@ export default function GameScreen() {
           </View>
           <View style={styles.dRow}><DBtn dir="down" onIn={startHold} onOut={stopHold} /></View>
         </View>
-        <Pressable testID="btn-menu-center" onPress={() => { hap("selection"); if (!busyRef.current) setMenu(true); }} style={({ pressed }) => [styles.menuPill, pressed && styles.pressed]}>
+        <Pressable testID="btn-menu-center" delayPressIn={0} onPress={() => { hap("selection"); if (!busyRef.current) setMenu(true); }} style={({ pressed }) => [styles.menuPill, pressed && styles.pressed]}>
           <MaterialDesignIcons name="menu" size={18} color={colors.onSurface} />
           <PixelText style={styles.menuPillTxt}>MENU</PixelText>
         </Pressable>
         <View style={styles.right}>
           <View style={styles.ab}>
-            <Pressable testID="btn-b-run" onPress={() => { hap("selection"); if (dialog) advanceDialog(); else { setRun(!run); setToast(run ? "Cammini" : "Corri!"); } }} style={({ pressed }) => [styles.round, styles.bBtn, run && styles.bOn, pressed && styles.pressed]}>
+            <Pressable testID="btn-b-run" delayPressIn={0} onPress={() => { hap("selection"); if (dialog) advanceDialog(); else { setRun(!run); setToast(run ? "Cammini" : "Corri!"); } }} style={({ pressed }) => [styles.round, styles.bBtn, run && styles.bOn, pressed && styles.pressed]}>
               <PixelText style={styles.abTxt}>B</PixelText>
             </Pressable>
-            <Pressable testID="btn-a-interact" onPress={dialog ? advanceDialog : interact} style={({ pressed }) => [styles.round, styles.aBtn, pressed && styles.pressed]}>
+            <Pressable testID="btn-a-interact" delayPressIn={0} onPress={dialog ? advanceDialog : interact} style={({ pressed }) => [styles.round, styles.aBtn, pressed && styles.pressed]}>
               <PixelText style={styles.abTxt}>A</PixelText>
             </Pressable>
           </View>
@@ -332,8 +332,9 @@ export default function GameScreen() {
 
       <Modal visible={menu} transparent animationType="fade" onRequestClose={() => setMenu(false)}>
         <Pressable style={styles.scrim} onPress={() => setMenu(false)} testID="menu-scrim">
-          <Animated.View entering={FadeInDown.duration(200)} style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
+          <Animated.View entering={FadeInDown.duration(200)} style={[styles.sheet, { paddingBottom: insets.bottom + 16, maxHeight: "88%" }]}>
             <PixelText style={styles.sheetTitle}>MENU · {save.name}</PixelText>
+            <ScrollView contentContainerStyle={{ gap: 6 }} showsVerticalScrollIndicator={false}>
             <MenuItem icon="map" label="Mappa del Mondo" testID="menu-worldmap" onPress={() => { setMenu(false); router.push("/mappa"); }} />
             <MenuItem icon="account-multiple" label="Stanze Online (sfida, co-op, scambi)" testID="menu-rooms" onPress={() => { setMenu(false); router.push("/diretta"); }} />
             <MenuItem icon="sword-cross" label="Sfida tra Amici" testID="menu-duel" onPress={() => { setMenu(false); router.push("/sfida"); }} />
@@ -344,6 +345,7 @@ export default function GameScreen() {
             <MenuItem icon="content-save" label={sync === "saving" ? "Salvataggio..." : sync === "error" ? "Salva (errore, riprova)" : "Salva ora"} testID="menu-save" onPress={async () => { await flush(); setToast("Partita salvata!"); setMenu(false); }} />
             <MenuItem icon={muted ? "volume-off" : "volume-high"} label={muted ? "Audio: spento" : "Audio: acceso"} testID="menu-audio" onPress={() => { setMuted(!muted); setMutedState(!muted); }} />
             <MenuItem icon="home" label="Schermata iniziale" testID="menu-title" onPress={async () => { setMenu(false); await flush(); router.dismissTo("/"); }} />
+            </ScrollView>
           </Animated.View>
         </Pressable>
       </Modal>
@@ -373,7 +375,7 @@ const ARROW: Record<Dir, "chevron-up" | "chevron-down" | "chevron-left" | "chevr
 
 function DBtn({ dir, onIn, onOut }: { dir: Dir; onIn: (d: Dir) => void; onOut: () => void }) {
   return (
-    <Pressable testID={`dpad-${dir}`} onPressIn={() => onIn(dir)} onPressOut={onOut} style={({ pressed }) => [styles.dBtn, pressed && styles.pressed]}>
+    <Pressable testID={`dpad-${dir}`} delayPressIn={0} onPressIn={() => onIn(dir)} onPressOut={onOut} style={({ pressed }) => [styles.dBtn, pressed && styles.pressed]}>
       <MaterialDesignIcons name={ARROW[dir]} size={32} color={colors.onSurface} />
     </Pressable>
   );
@@ -419,8 +421,8 @@ const styles = StyleSheet.create({
   abTxt: { fontSize: 22, color: colors.onBrandPrimary },
   hint: { fontSize: 11, color: colors.muted },
   scrim: { flex: 1, backgroundColor: colors.scrim, justifyContent: "flex-end" },
-  sheet: { backgroundColor: colors.surface, borderTopWidth: 4, borderTopColor: colors.brandPrimary, padding: 16, gap: 4 },
-  sheetTitle: { color: colors.brandSecondary, marginBottom: 8, fontSize: 15 },
-  menuItem: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 52, paddingHorizontal: 8, borderBottomWidth: 1, borderBottomColor: colors.divider },
+  sheet: { backgroundColor: colors.surface, borderTopWidth: 4, borderTopColor: colors.brandPrimary, borderLeftWidth: 4, borderRightWidth: 4, borderColor: colors.onSurface, borderTopLeftRadius: 10, borderTopRightRadius: 10, padding: 16, gap: 6 },
+  sheetTitle: { color: colors.onBrandPrimary, backgroundColor: colors.brandPrimary, alignSelf: "flex-start", paddingHorizontal: 10, paddingVertical: 4, borderWidth: 2, borderColor: colors.onSurface, marginBottom: 8, fontSize: 15 },
+  menuItem: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 52, paddingHorizontal: 10, backgroundColor: colors.surfaceSecondary, borderWidth: 2, borderColor: colors.border, borderBottomWidth: 4, borderRadius: 4 },
   shopRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.divider },
 });

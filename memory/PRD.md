@@ -69,3 +69,8 @@ Map adventure with turn-based battles · modern colourful pixel art · strong sa
 - Content: all new data is in src/game/expansion.ts and merged into data.ts and sprites.ts. Modena (west of Bologna), Parma (west of Modena), Ravenna (north of the Riviera), interiors Acetaia Ducale (Modena door 12,2) and Mercato di Mezzo (Bologna door 2,5). 9 new Mostrelli (4 evolution lines plus Rossocorsa), 5 moves, 3 new bosses/badges, the Caramella Rara (kind "level", not sold in shops), map pickups (save.picked) and trainer prizes (npc.prize, or the default: bosses give a caramella, trainers give a basic item).
 - Online rooms (/diretta, menu "Stanze Online"): live_duels has `mode` pvp|coop|trade. Coop: 2 players vs a boss team (+3 lv), worked out the same way on both phones (duelEngine with a "boss" side), with a "pass" action when a player has no Mostrelli left. Trade: POST /api/live/{code}/offer {uid}, then /confirm by both; the server swaps the Mostrelli in both saves (the room is locked during the swap) and clients reload their save.
 - Game Boy ROM (/app/gb, build.sh) is a separate experiment; it compiles but has not been tested.
+
+## Iteration 10 (2026-06): smooth walking on iPhone browser, detailed pixel art
+- Walking on web uses CSS transitions (compositor) for camera and player; d-pad/A/B/MENU use delayPressIn=0 (quick taps were ignored before).
+- Detailed tiles: terracotta coppi roofs, plaster walls with green shutters, arched doors, varied bricks, cobblestones, portico arches, water depth, soft shadows under tall tiles.
+- UI: Logo component (gold outline + red ribbon) on title, button shine, card-style scrollable game menu, dialog name tab. Title background is the original pixel-art Emilia-Romagna panorama (TitleScene.tsx).
