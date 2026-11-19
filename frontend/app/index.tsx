@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/src/auth";
 import { useGame } from "@/src/game/GameContext";
 import { PixelSprite } from "@/src/game/PixelSprite";
-import { TitleScene } from "@/src/game/TitleScene";
+import { TitleLive } from "@/src/game/TitleScene";
 import { Logo, PixelText, RetroButton } from "@/src/game/ui";
 import { colors } from "@/src/theme";
 
@@ -23,8 +23,8 @@ export default function Title() {
 
   return (
     <View style={styles.root} testID="title-screen">
-      <TitleScene />
-      <LinearGradient colors={["rgba(18,18,18,0.55)", "rgba(18,18,18,0.1)", "rgba(18,18,18,0.6)", colors.surface]} locations={[0, 0.35, 0.7, 1]} style={StyleSheet.absoluteFill} />
+      <TitleLive />
+      <LinearGradient colors={["rgba(26,19,66,0.85)", "rgba(26,19,66,0.15)", "rgba(26,19,66,0.35)", colors.surface]} locations={[0, 0.4, 0.68, 1]} style={StyleSheet.absoluteFill} />
       <View style={[styles.content, { paddingTop: insets.top + 48 }]}>
         <Animated.View entering={FadeInUp.duration(500)}>
           <Logo size={44} ribbon="EMILIA-ROMAGNA EDITION" />

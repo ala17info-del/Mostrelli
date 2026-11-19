@@ -1,6 +1,6 @@
 import * as Clipboard from "expo-clipboard";
-import { Redirect, useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { Redirect, useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -24,15 +24,84 @@ export default function Diretta() {
   const [mode, setMode] = useState<"pvp" | "coop" | "trade">("pvp");
   const [boss, setBoss] = useState(ROOM_BOSSES[0]?.id ?? "");
 
+  const params = useLocalSearchParams<{ join?: string; code?: string }>();
+  const [matching, setMatching] = useState(false);
+
+  // Long poll: the server answers as soon as the room changes, so moves arrive almost instantly.
   const liveCode = live?.code;
   const done = live?.status === "done";
+  const revRef = useRef(0);
+  revRef.current = live?.rev ?? 0;
   useEffect(() => {
     if (!liveCode || done) return;
-    const t = setInterval(() => {
-      api<Live>(`/live/${liveCode}`).then(setLive).catch(() => {});
-    }, 1500);
-    return () => clearInterval(t);
+    let alive = true;
+    (async () => {
+      while (alive) {
+        try {
+          const l = await api<Live>(`/live/${liveCode}/wait?rev=${revRef.current}`);
+          if (!alive) break;
+          setLive(l);
+          if (l.status === "done") break;
+        } catch {
+          await new Promise((r) => setTimeout(r, 1500)); // offline for a moment: retry gently
+        }
+      }
+    })();
+    return () => { alive = false; };
   }, [liveCode, done]);
+
+  // Coming from an invite (?join=CODE) or from our own challenge in the map (?code=CODE).
+  const opened = useRef(false);
+  useEffect(() => {
+    if (!save || opened.current) return;
+    const code = String(params.join ?? params.code ?? "").toUpperCase();
+    if (!code) return;
+    opened.current = true;
+    const req = params.join
+      ? api<Live>(`/live/${code}/join`, { method: "POST", body: JSON.stringify({ name: save.name, party: save.party }) })
+      : api<Live>(`/live/${code}`);
+    flush().then(() => req).then((l) => { setLive(l); hap("success"); }).catch((e: any) => setMsg(e.message));
+  }, [save, params.join, params.code, flush]);
+
+  // Quick match: wait in the public queue until someone with a similar team shows up.
+  useEffect(() => {
+    if (!matching) return;
+    let alive = true;
+    const t = setInterval(async () => {
+      try {
+        const r = await api<{ status: string; code?: string }>("/match");
+        if (!alive) return;
+        if (r.status === "matched" && r.code) {
+          setMatching(false);
+          hap("success");
+          setLive(await api<Live>(`/live/${r.code}`));
+        } else if (r.status === "none") {
+          setMatching(false);
+          setMsg("Nessun avversario trovato. Riprova tra poco!");
+        }
+      } catch {}
+    }, 2000);
+    return () => { alive = false; clearInterval(t); };
+  }, [matching]);
+  const quickMatch = async () => {
+    setMsg("");
+    setBusy(true);
+    try {
+      await flush();
+      const r = await api<{ status: string; live?: Live }>("/match", { method: "POST", body: JSON.stringify({ name: save!.name, party: save!.party }) });
+      if (r.status === "matched" && r.live) { hap("success"); setLive(r.live); }
+      else setMatching(true);
+    } catch (e: any) {
+      setMsg(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const cancelMatch = () => {
+    setMatching(false);
+    api("/match", { method: "DELETE" }).catch(() => {});
+  };
+  useEffect(() => () => { api("/match", { method: "DELETE" }).catch(() => {}); }, []);
 
   if (!save) return <Redirect href="/" />;
 
@@ -82,6 +151,21 @@ export default function Diretta() {
           </View>
         ) : (
           <>
+            <View style={styles.card} testID="quick-match-card">
+              <PixelText style={styles.h}>Partita veloce</PixelText>
+              <PixelText style={styles.meta}>Ti troviamo un avversario con una squadra di livello simile. Se nessuno è in linea, dopo un po' va bene chiunque.</PixelText>
+              {matching ? (
+                <>
+                  <View style={styles.waitRow}>
+                    <ActivityIndicator color={colors.brandSecondary} />
+                    <PixelText style={styles.meta}>Cerco un avversario in tutta l'Emilia-Romagna...</PixelText>
+                  </View>
+                  <RetroButton testID="quick-match-cancel" variant="secondary" small label="Annulla" onPress={cancelMatch} />
+                </>
+              ) : (
+                <RetroButton testID="quick-match-btn" label="Cerca avversario" disabled={busy} onPress={quickMatch} />
+              )}
+            </View>
             <View style={styles.card}>
               <PixelText style={styles.h}>Entra in una sfida</PixelText>
               <TextInput testID="live-code-input" value={code} onChangeText={(t) => setCode(t.toUpperCase())} maxLength={6} autoCapitalize="characters" placeholder="ES. AB12CD" placeholderTextColor={colors.muted} style={styles.input} />
@@ -126,12 +210,12 @@ const styles = StyleSheet.create({
   title: { fontSize: 22 },
   meta: { fontSize: 11, color: colors.muted, lineHeight: 16, flexShrink: 1 },
   msg: { color: colors.brandSecondary, fontSize: 13 },
-  card: { borderWidth: 2, borderColor: colors.border, backgroundColor: colors.surfaceSecondary, padding: 12, gap: 10 },
+  card: { borderRadius: 14, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.surfaceSecondary, padding: 12, gap: 10 },
   h: { fontSize: 15, color: colors.onSurface },
-  input: { height: 52, borderWidth: 2, borderColor: colors.borderStrong, backgroundColor: colors.surface, color: colors.onSurface, paddingHorizontal: 12, fontFamily: FONT, fontSize: 18, letterSpacing: 4 },
+  input: { height: 52, borderRadius: 14, borderWidth: 2, borderColor: colors.borderStrong, backgroundColor: colors.surface, color: colors.onSurface, paddingHorizontal: 12, fontFamily: FONT, fontSize: 18, letterSpacing: 4 },
   team: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   code: { fontSize: 32, letterSpacing: 6, color: colors.brandSecondary, textAlign: "center" },
   waitRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  chip: { borderWidth: 2, borderColor: colors.border, paddingHorizontal: 10, paddingVertical: 8, minHeight: 44, justifyContent: "center", backgroundColor: colors.surface },
+  chip: { borderRadius: 14, borderWidth: 2, borderColor: colors.border, paddingHorizontal: 10, paddingVertical: 8, minHeight: 44, justifyContent: "center", backgroundColor: colors.surface },
   chipOn: { borderColor: colors.brandSecondary, backgroundColor: colors.surfaceTertiary },
 });

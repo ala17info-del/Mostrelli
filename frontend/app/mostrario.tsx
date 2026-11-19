@@ -59,15 +59,16 @@ export default function Mostrario() {
         renderItem={({ item: s }) => {
           const caught = save.caught.includes(s.id);
           const seen = save.seen.includes(s.id);
+          const shiny = [...save.party, ...save.box].some((m) => m.s === s.id && m.shiny);
           const expanded = open === s.id;
           return (
             <Pressable testID={`mostrario-card-${s.id}`} onPress={() => seen && setOpen(expanded ? null : s.id)} style={styles.card}>
               <PixelText style={styles.num}>#{String(s.num).padStart(3, "0")}</PixelText>
               <View style={{ alignItems: "center", paddingVertical: 8 }}>
-                <PixelSprite name={s.id} size={72} silhouette={!seen} />
+                <PixelSprite name={s.id} size={72} silhouette={!seen} shiny={shiny} />
               </View>
               <PixelText style={styles.name} numberOfLines={1}>{seen ? s.name : "???"}</PixelText>
-              {seen && <PixelText style={[styles.meta, { color: TYPES[s.type].color }]}>{TYPES[s.type].name}{caught ? " · ✓" : ""}</PixelText>}
+              {seen && <PixelText style={[styles.meta, { color: TYPES[s.type].color }]}>{TYPES[s.type].name}{caught ? " · ✓" : ""}{shiny ? " · ✨" : ""}</PixelText>}
               {expanded && <PixelText style={styles.desc}>{caught ? s.desc : "Avvistato, ma non ancora catturato. Ci vuole un vasetto!"}</PixelText>}
             </Pressable>
           );
@@ -85,9 +86,9 @@ const styles = StyleSheet.create({
   meta: { fontSize: 11, color: colors.muted },
   chipRow: { height: 56, borderBottomWidth: 2, borderBottomColor: colors.border, justifyContent: "center" },
   chips: { gap: 8, paddingHorizontal: 16, alignItems: "center" },
-  chip: { height: 36, paddingHorizontal: 14, justifyContent: "center", borderWidth: 2, borderColor: colors.borderStrong, flexShrink: 0 },
+  chip: { height: 36, paddingHorizontal: 14, justifyContent: "center", borderRadius: 14, borderWidth: 2, borderColor: colors.borderStrong, flexShrink: 0 },
   chipOn: { backgroundColor: colors.brandSecondary, borderColor: colors.brandSecondary },
-  card: { flex: 1, maxWidth: "48.5%", backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.border, padding: 12 },
+  card: { flex: 1, maxWidth: "48.5%", backgroundColor: colors.surfaceSecondary, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 12 },
   num: { fontSize: 11, color: colors.muted },
   name: { fontSize: 14 },
   desc: { fontSize: 11, color: colors.onSurfaceSecondary, marginTop: 6, lineHeight: 16 },

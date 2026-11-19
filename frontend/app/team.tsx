@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { sfx } from "@/src/game/audio";
 import { ITEMS, ItemId, MOVES, SPECIES, TYPES } from "@/src/game/data";
-import { applyItem, knownMoves, Mon, monName, stats } from "@/src/game/engine";
+import { applyItem, knownMoves, Mon, monName, stats, MAX_LV, xpFor } from "@/src/game/engine";
 import { useGame } from "@/src/game/GameContext";
 import { PixelSprite } from "@/src/game/PixelSprite";
 import { hap, HpBar, PixelText, RetroButton } from "@/src/game/ui";
@@ -107,13 +107,13 @@ export default function Team() {
 function MonCard({ m, i, children }: { m: Mon; i: number; children: React.ReactNode }) {
   const sp = SPECIES[m.s];
   const st = stats(m);
-  const nextXp = (m.lv + 1) ** 3;
+  const nextXp = m.lv >= MAX_LV ? m.xp : xpFor(m.lv + 1);
   return (
     <View style={styles.card} testID={`team-card-${i}`}>
       <View style={styles.cardTop}>
-        <PixelSprite name={m.s} size={64} />
+        <PixelSprite name={m.s} size={64} shiny={m.shiny} />
         <View style={{ flex: 1, gap: 4 }}>
-          <PixelText style={styles.name}>{sp.name} <PixelText style={styles.meta}>Lv{m.lv}</PixelText></PixelText>
+          <PixelText style={styles.name}>{m.shiny ? "✨" : ""}{sp.name} <PixelText style={styles.meta}>Lv{m.lv}{m.shiny ? " · cromatico" : ""}</PixelText></PixelText>
           <PixelText style={[styles.meta, { color: TYPES[sp.type].color }]}>{TYPES[sp.type].name}</PixelText>
           <HpBar hp={m.hp} max={st.hp} />
           <PixelText style={styles.meta}>{m.hp}/{st.hp} PV · ATT {st.atk} · DIF {st.def} · VEL {st.spd}</PixelText>
@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 22 },
   meta: { fontSize: 11, color: colors.muted },
   msg: { color: colors.brandSecondary, paddingHorizontal: 16, paddingTop: 12, fontSize: 13 },
-  card: { backgroundColor: colors.surfaceSecondary, borderWidth: 2, borderColor: colors.border, padding: 12, gap: 8 },
+  card: { backgroundColor: colors.surfaceSecondary, borderRadius: 14, borderWidth: 2, borderColor: colors.border, padding: 12, gap: 8 },
   cardTop: { flexDirection: "row", gap: 12, alignItems: "center" },
   name: { fontSize: 16 },
   moves: { fontSize: 11, color: colors.onSurfaceSecondary },

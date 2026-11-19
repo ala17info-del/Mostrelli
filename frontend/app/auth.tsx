@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
   back: { minHeight: 44, justifyContent: "center", alignSelf: "flex-start" },
   title: { fontSize: 24, marginTop: 16 },
   sub: { color: colors.muted, marginTop: 8, fontSize: 13, lineHeight: 20 },
-  tabs: { flexDirection: "row", marginTop: 24, borderWidth: 2, borderColor: colors.borderStrong },
+  tabs: { flexDirection: "row", marginTop: 24, borderRadius: 14, borderWidth: 2, borderColor: colors.borderStrong },
   tab: { flex: 1, height: 44, alignItems: "center", justifyContent: "center" },
   tabOn: { backgroundColor: colors.brandSecondary },
   label: { marginTop: 16, marginBottom: 6, color: colors.onSurfaceSecondary, fontSize: 12 },
