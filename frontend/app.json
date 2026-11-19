@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Bologna Monstri",
+    "name": "Mostrelli",
     "slug": "frontend",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -22,7 +22,13 @@
     "web": {
       "bundler": "metro",
       "output": "single",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "name": "Mostrelli",
+      "shortName": "Mostrelli",
+      "lang": "it",
+      "themeColor": "#1a1a1a",
+      "backgroundColor": "#1a1a1a",
+      "description": "Un gioco di creature originale ambientato in Emilia-Romagna."
     },
     "plugins": [
       "expo-router",
