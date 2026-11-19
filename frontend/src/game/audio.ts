@@ -14,6 +14,8 @@ const BGM = {
   ferrara: require("../../assets/audio/ferrara.wav"),
   maggiore: require("../../assets/audio/maggiore.wav"),
   altedo: require("../../assets/audio/altedo.wav"),
+  // Original 8-bit comic march for Zio DUC's gym.
+  duc: require("../../assets/audio/duc.wav"),
 };
 const SFX = {
   step: require("../../assets/audio/step.wav"),

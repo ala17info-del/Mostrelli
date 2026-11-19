@@ -20,19 +20,40 @@ export type Save = {
   money: number;
   items: Record<string, number>;
   defeated: string[];
+  /** Maps the player has entered at least once (world map). */
+  visited?: string[];
+  /** false = hidden from other players on the map. */
+  online?: boolean;
+  /** Counters for trophies, trophies already collected, days a feast was visited. */
+  stats?: { wins?: number; catches?: number; shinies?: number; sagre?: number };
+  trophies?: string[];
+  sagraDays?: string[];
+  /** Main story chapter (0 = first) and side quests (b = wins counted when the quest started). */
+  story?: number;
+  /** Clothes: what is worn, and everything bought. */
+  outfit?: { hat?: string; glasses?: string; neck?: string; shirt?: string };
+  wardrobe?: string[];
+  /** Obstacles cleared with field moves: "map:x,y". */
+  cleared?: string[];
+  /** Player character: "m" or "f". */
+  gender?: "m" | "f";
+  quests?: Record<string, { s: "on" | "done"; b?: number }>;
   badges: string[];
   lastHeal: { map: string; x: number; y: number };
   picked?: string[];
 };
 
-export function newSave(name: string, starter: string): Save {
+export function newSave(name: string, starter: string, opts: { map?: string; gender?: "m" | "f"; lv?: number } = {}): Save {
+  const map = opts.map && MAPS[opts.map] ? opts.map : "bologna";
+  const at = map === "bologna" ? { x: 7, y: 7 } : MAPS[map].heal;
   return {
-    name, map: "bologna", x: 7, y: 7, dir: "down",
-    party: [makeMon(starter, 5)], box: [],
+    name, map, x: at.x, y: at.y, dir: "down", gender: opts.gender ?? "m",
+    party: [makeMon(starter, opts.lv ?? 5)], box: [],
     seen: [starter], caught: [starter],
     money: 150, items: { vasetto: 5, brodino: 3, tortellini: 1, caffe: 1 },
     defeated: [], badges: [],
-    lastHeal: { map: "bologna", ...MAPS.bologna.heal },
+    lastHeal: { map, ...MAPS[map].heal },
+    visited: [map],
   };
 }
 

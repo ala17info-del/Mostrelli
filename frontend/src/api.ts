@@ -1,10 +1,12 @@
 import { storage } from "@/src/utils/storage";
+import { demoApi } from "@/src/demoApi";
 
 const BASE = `${process.env.EXPO_PUBLIC_BACKEND_URL}/api`;
 export const TOKEN_KEY = "auth_token";
 
 export async function api<T = any>(path: string, init: RequestInit = {}): Promise<T> {
   const token = await storage.secureGet<string | null>(TOKEN_KEY, null);
+  if (process.env.EXPO_PUBLIC_DEMO === "1") return demoApi<T>(path, init, token);
   const res = await fetch(`${BASE}${path}`, {
     ...init,
     headers: {

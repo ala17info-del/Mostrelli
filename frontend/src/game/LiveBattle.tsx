@@ -16,6 +16,10 @@ import { useGame } from "./GameContext";
 import { Breathe } from "./Alive";
 import { battleSize, PixelSprite } from "./PixelSprite";
 import { hap, HpBar, PixelText, RetroButton } from "./ui";
+import { TimedCommand } from "./BattleQte";
+
+// Preset phrases (no free text, so there is nothing to moderate). Same order as the server's QUICK_CHAT.
+export const QUICK_CHAT = ["Ciao! 👋", "Bella mossa!", "Socc'mel! 😮", "Ops... 😅", "Dai che ce la fai!", "Ci penso un attimo", "Che fortuna! 🍀", "Rivincita?", "GG! 🤝", "😂", "😡", "❤️"];
 
 export type Live = {
   code: string; side: Side; status: "waiting" | "active" | "done"; turn: number;
@@ -23,14 +27,15 @@ export type Live = {
   log: TurnEntry[]; my_action: boolean; their_action: boolean; winner: Side | "draw" | null;
   mode: "pvp" | "coop" | "trade"; boss: string | null;
   offers: Partial<Record<Side, Mon>>; confirms: Partial<Record<Side, boolean>>; trade_done: boolean;
+  rev?: number; chat?: { side: Side; m: number; at: string }[];
 };
 export const ROOM_BOSSES: Npc[] = Object.values(MAPS).flatMap((m) => m.npcs.filter((n) => n.kind === "boss"));
 const bossTeam = (id: string | null) => {
   const n = ROOM_BOSSES.find((b) => b.id === id);
   // Two players at once: the opponent gets +3 levels to stay a real challenge.
-  return { npc: n, team: (n?.team ?? []).map(([sp, lv], i) => ({ ...makeMon(sp, Math.min(50, lv + 3)), uid: `b${i}` })) };
+  return { npc: n, team: (n?.team ?? []).map(([sp, lv], i) => ({ ...makeMon(sp, Math.min(100, lv + 3)), uid: `b${i}` })) };
 };
-type Phase = "msg" | "menu" | "moves" | "bag" | "itemTarget" | "switch" | "wait" | "over";
+type Phase = "msg" | "menu" | "moves" | "bag" | "itemTarget" | "switch" | "wait" | "over" | "qte";
 
 export function LiveBattle({ live, setLive, onExit }: { live: Live; setLive: (l: Live) => void; onExit: () => void }) {
   const insets = useSafeAreaInsets();
@@ -58,6 +63,22 @@ export function LiveBattle({ live, setLive, onExit }: { live: Live; setLive: (l:
   const [phase, setPhase] = useState<Phase>("msg");
   const [pending, setPending] = useState<ItemId | null>(null);
   const [err, setErr] = useState("");
+  const [qteMv, setQteMv] = useState<string | null>(null);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [bubble, setBubble] = useState<{ side: Side; text: string; k: string } | null>(null);
+  // Show each new quick-chat message for a few seconds.
+  const lastChat = live.chat?.[live.chat.length - 1];
+  useEffect(() => {
+    if (!lastChat) return;
+    setBubble({ side: lastChat.side, text: QUICK_CHAT[lastChat.m] ?? "", k: lastChat.at });
+    if (lastChat.side !== side) hap("light");
+    const t = setTimeout(() => setBubble(null), 3500);
+    return () => clearTimeout(t);
+  }, [lastChat?.at]); // eslint-disable-line react-hooks/exhaustive-deps
+  const say = (m: number) => {
+    setChatOpen(false);
+    api<Live>(`/live/${live.code}/chat`, { method: "POST", body: JSON.stringify({ m }) }).then(setLive).catch(() => {});
+  };
   const [fx, setFx] = useState<{ k: number; line: DLine } | null>(null);
   const ended = useRef(false);
   // Re-entering a finished room must not pay the coop reward again.
@@ -160,7 +181,7 @@ export function LiveBattle({ live, setLive, onExit }: { live: Live; setLive: (l:
   return (
     <View style={[styles.root, { paddingTop: insets.top + 8 }]} testID="live-battle">
       <View style={styles.scene}>
-        <LinearGradient colors={["#c9a7e0", "#8f6fb8", "#3f2d63"]} style={StyleSheet.absoluteFill} />
+        <LinearGradient colors={["#ff7ad9", "#8f5bff", "#2e1f9e"]} style={StyleSheet.absoluteFill} />
         <View style={styles.row}>
           <Info mon={foe} hp={ehp} owner={names[foeSide]} testID="live-foe-info" />
           <View style={styles.spriteWrap}>
@@ -188,6 +209,25 @@ export function LiveBattle({ live, setLive, onExit }: { live: Live; setLive: (l:
         </View>
       </View>
 
+      {bubble && (
+        <View pointerEvents="none" style={[styles.bubble, bubble.side === side ? styles.bubbleMe : styles.bubbleThem]} testID="live-chat-bubble">
+          <PixelText style={styles.bubbleTxt}>{bubble.side === side ? "Tu" : names[bubble.side]}: {bubble.text}</PixelText>
+        </View>
+      )}
+      {(
+        <Pressable testID="live-chat-btn" onPress={() => { hap("selection"); setChatOpen(!chatOpen); }} style={styles.chatBtn}>
+          <PixelText style={{ fontSize: 18 }}>💬</PixelText>
+        </Pressable>
+      )}
+      {chatOpen && (
+        <View style={styles.chatPanel} testID="live-chat-panel">
+          {QUICK_CHAT.map((t, i) => (
+            <Pressable key={i} testID={`live-chat-${i}`} onPress={() => say(i)} style={({ pressed }) => [styles.chatChip, pressed && { opacity: 0.7 }]}>
+              <PixelText style={{ fontSize: 12 }}>{t}</PixelText>
+            </Pressable>
+          ))}
+        </View>
+      )}
       <View style={[styles.panel, { paddingBottom: insets.bottom + 12 }]}>
         {!!err && <PixelText style={styles.err} testID="live-error">{err}</PixelText>}
         {phase === "msg" && showing && (
@@ -195,6 +235,9 @@ export function LiveBattle({ live, setLive, onExit }: { live: Live; setLive: (l:
             <PixelText style={styles.msg}>{showing.text}</PixelText>
             <PixelText style={styles.next}>▼</PixelText>
           </Pressable>
+        )}
+        {phase === "qte" && qteMv && (
+          <TimedCommand moveName={MOVES[qteMv].name} guard={!coop || !st.out[side]} onDone={(grade, guard) => { const mv = qteMv; setQteMv(null); send({ kind: "move", move: mv, grade, guard }); }} />
         )}
         {phase === "wait" && (
           <View style={styles.msgBox} testID="live-waiting">
@@ -313,11 +356,18 @@ function Cmd({ label, color, fg, onPress, testID }: { label: string; color: stri
 }
 
 const styles = StyleSheet.create({
+  bubble: { position: "absolute", left: 16, right: 16, top: "38%", padding: 8, borderRadius: 14, borderWidth: 2, borderColor: colors.borderStrong, backgroundColor: colors.surfaceSecondary, zIndex: 5 },
+  bubbleMe: { alignSelf: "flex-end" },
+  bubbleThem: { borderColor: colors.brandSecondary },
+  bubbleTxt: { fontSize: 13 },
+  chatBtn: { position: "absolute", right: 12, top: "52%", width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceSecondary, borderWidth: 2, borderColor: colors.borderStrong, zIndex: 6 },
+  chatPanel: { position: "absolute", left: 12, right: 12, top: "20%", flexDirection: "row", flexWrap: "wrap", gap: 6, padding: 10, borderRadius: 14, borderWidth: 2, borderColor: colors.borderStrong, backgroundColor: colors.surface, zIndex: 7 },
+  chatChip: { minHeight: 40, paddingHorizontal: 10, justifyContent: "center", borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceSecondary },
   root: { flex: 1, backgroundColor: colors.surface },
-  ally: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", backgroundColor: colors.surfaceSecondary, borderWidth: 2, borderColor: colors.onSurface, paddingHorizontal: 6, paddingVertical: 2, maxWidth: "90%" },
+  ally: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", backgroundColor: colors.surfaceSecondary, borderRadius: 14, borderWidth: 2, borderColor: colors.borderStrong, paddingHorizontal: 6, paddingVertical: 2, maxWidth: "90%" },
   scene: { flex: 1, justifyContent: "space-around", paddingHorizontal: 16, overflow: "hidden" },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  infoBox: { width: "48%", backgroundColor: colors.surfaceSecondary, borderWidth: 2, borderColor: colors.onSurface, padding: 8, gap: 4 },
+  infoBox: { width: "48%", backgroundColor: colors.surfaceSecondary, borderRadius: 14, borderWidth: 2, borderColor: colors.borderStrong, padding: 8, gap: 4 },
   monName: { fontSize: 15, color: colors.onSurface },
   meta: { fontSize: 11, color: colors.muted },
   hpText: { fontSize: 12, color: colors.onSurfaceSecondary, textAlign: "right" },
@@ -325,16 +375,16 @@ const styles = StyleSheet.create({
   ground: { position: "absolute", bottom: -6, width: 130, height: 22, borderRadius: 999, backgroundColor: "#2a1d42" },
   panel: { backgroundColor: colors.surface, borderTopWidth: 4, borderTopColor: colors.onSurface, padding: 12, minHeight: 200, gap: 6 },
   err: { color: colors.brandPrimary, fontSize: 12 },
-  msgBox: { minHeight: 150, borderWidth: 2, borderColor: colors.onSurface, backgroundColor: colors.surfaceSecondary, padding: 16, justifyContent: "space-between", gap: 10 },
+  msgBox: { minHeight: 150, borderRadius: 14, borderWidth: 2, borderColor: colors.borderStrong, backgroundColor: colors.surfaceSecondary, padding: 16, justifyContent: "space-between", gap: 10 },
   msg: { fontSize: 16, lineHeight: 24 },
   next: { alignSelf: "flex-end", color: colors.brandSecondary },
   prompt: { fontSize: 14, color: colors.muted, marginBottom: 8 },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  cmd: { width: "48.5%", height: 64, borderWidth: 2, borderColor: colors.onSurface, borderBottomWidth: 4, alignItems: "center", justifyContent: "center", borderRadius: 2 },
+  cmd: { width: "48.5%", height: 64, borderWidth: 2, borderColor: colors.borderStrong, borderBottomWidth: 4, alignItems: "center", justifyContent: "center", borderRadius: 2 },
   cmdTxt: { fontSize: 15, textTransform: "uppercase", letterSpacing: 1 },
-  move: { width: "48.5%", minHeight: 64, borderWidth: 2, borderColor: colors.borderStrong, borderLeftWidth: 8, backgroundColor: colors.surfaceSecondary, padding: 8, justifyContent: "center" },
+  move: { width: "48.5%", minHeight: 64, borderRadius: 14, borderWidth: 2, borderColor: colors.borderStrong, borderLeftWidth: 8, backgroundColor: colors.surfaceSecondary, padding: 8, justifyContent: "center" },
   moveName: { fontSize: 13, fontFamily: FONT },
   moveMeta: { fontSize: 11, marginTop: 2 },
   back: { marginTop: 8, minHeight: 44, justifyContent: "center" },
-  swRow: { flexDirection: "row", alignItems: "center", gap: 12, padding: 8, borderWidth: 1, borderColor: colors.border, marginBottom: 6, backgroundColor: colors.surfaceSecondary },
+  swRow: { flexDirection: "row", alignItems: "center", gap: 12, padding: 8, borderRadius: 14, borderWidth: 1, borderColor: colors.border, marginBottom: 6, backgroundColor: colors.surfaceSecondary },
 });

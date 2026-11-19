@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <title>Mostrelli</title>
+    <!-- viewport-fit=cover: full screen under the notch; no zoom, it's a game -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="description" content="Mostrelli: un gioco di creature originale ambientato in Emilia-Romagna." />
+    <meta name="theme-color" content="#1a1a1a" />
+    <!-- Installed from Safari ("Add to Home Screen"): opens full screen like an app -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Mostrelli" />
+    <meta name="format-detection" content="telephone=no" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="icon" href="/favicon.ico" />
+    <style id="expo-reset">
+      html, body { height: 100%; }
+      body { overflow: hidden; margin: 0; background: #1a1a1a; overscroll-behavior: none; }
+      #root { display: flex; height: 100%; flex: 1; }
+      /* Game controls: no text selection, no long-press callout, no tap flash, no double-tap zoom */
+      html, body, body * { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+      input, textarea, input *, textarea * { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+      /* Sharp pixel art when images are scaled */
+      img, [style*="background-image"] { image-rendering: pixelated; image-rendering: crisp-edges; }
+      /* Loading screen until the game starts */
+      #boot { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; background: #1a1a1a; color: #f2c94c; font: 16px monospace; letter-spacing: 3px; z-index: 0; }
+      #boot img { width: 96px; height: 96px; border: 3px solid #000; }
+    </style>
+  </head>
+  <body>
+    <noscript>Per giocare a Mostrelli serve JavaScript.</noscript>
+    <div id="boot"><img src="/icons/icon-192.png" alt="" /><div>MOSTRELLI</div></div>
+    <div id="root" style="position: relative; z-index: 1"></div>
+    <script>
+      document.addEventListener("contextmenu", function (e) { if (!e.target.closest || !e.target.closest("input,textarea")) e.preventDefault(); }, { capture: true });
+      document.addEventListener("selectstart", function (e) { if (!e.target.closest || !e.target.closest("input,textarea")) e.preventDefault(); }, { capture: true });
+      // iOS Safari ignores user-scalable=no for pinch: block it explicitly.
+      document.addEventListener("gesturestart", function (e) { e.preventDefault(); });
+      // Offline cache (loads faster the second time). Only on the real site, never on localhost.
+      if ("serviceWorker" in navigator && location.hostname !== "localhost") {
+        window.addEventListener("load", function () { navigator.serviceWorker.register("/sw.js").catch(function () {}); });
+      }
+    </script>
+  </body>
+</html>

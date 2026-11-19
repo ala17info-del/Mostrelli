@@ -88,8 +88,8 @@ const styles = StyleSheet.create({
   meta: { fontSize: 11, color: colors.muted, lineHeight: 16 },
   ok: { color: colors.brandTertiary, fontSize: 12 },
   offers: { flexDirection: "row", alignItems: "center", gap: 8 },
-  offer: { flex: 1, alignItems: "center", gap: 4, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.surfaceSecondary, padding: 8, minHeight: 130 },
+  offer: { flex: 1, alignItems: "center", gap: 4, borderRadius: 14, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.surfaceSecondary, padding: 8, minHeight: 130 },
   swap: { fontSize: 22, color: colors.brandSecondary },
-  row: { flexDirection: "row", alignItems: "center", gap: 10, padding: 8, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceSecondary, minHeight: 52 },
-  rowOn: { borderColor: colors.brandSecondary, borderWidth: 2 },
+  row: { flexDirection: "row", alignItems: "center", gap: 10, padding: 8, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceSecondary, minHeight: 52 },
+  rowOn: { borderColor: colors.brandSecondary, borderRadius: 14, borderWidth: 2 },
 });

@@ -49,3 +49,45 @@ export const TitleScene = memo(function TitleScene() {
     </View>
   );
 });
+
+// ---- Live title scene: a real map of the game slowly panning (the Riviera, beach and sea), with the
+// player and a Mostrello strolling along the promenade. Falls back to the painted panorama when the
+// map picture can't be drawn (native app).
+import { Image, Platform } from "react-native";
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from "react-native-reanimated";
+import { MAPS } from "./data";
+import { mapImage } from "./mapImage";
+import { PixelSprite } from "./PixelSprite";
+
+const T = 56;
+function Walker({ name, delay, size, row }: { name: string; delay: number; size: number; row: number }) {
+  const x = useSharedValue(-2);
+  const step = useSharedValue(0);
+  React.useEffect(() => {
+    x.value = withRepeat(withSequence(withTiming(-2, { duration: delay }), withTiming(17, { duration: 15000, easing: Easing.linear })), -1);
+    step.value = withRepeat(withSequence(withTiming(1, { duration: 200 }), withTiming(0, { duration: 200 })), -1);
+  }, [x, step, delay]);
+  const st = useAnimatedStyle(() => ({ transform: [{ translateX: x.value * T }, { translateY: row * T - step.value * 3 }] }));
+  return <Animated.View style={[{ position: "absolute", left: 0, top: 0 }, st]}><PixelSprite name={name} size={size} /></Animated.View>;
+}
+
+export function TitleLive() {
+  const uri = React.useMemo(() => (Platform.OS === "web" && MAPS.riccione ? mapImage(MAPS.riccione, T, 0) : null), []);
+  const pan = useSharedValue(0);
+  React.useEffect(() => {
+    pan.value = withRepeat(withTiming(1, { duration: 22000, easing: Easing.inOut(Easing.sin) }), -1, true);
+  }, [pan]);
+  const st = useAnimatedStyle(() => ({ transform: [{ translateX: -pan.value * T * 7 }] }));
+  if (!uri) return <TitleScene />;
+  return (
+    <View style={[StyleSheet.absoluteFill, { overflow: "hidden", backgroundColor: "#3a88d8" }]} pointerEvents="none" testID="title-live">
+      <Animated.View style={[{ position: "absolute", left: 0, top: -T * 2, width: T * 16, height: T * 16 }, st]}>
+        <Image source={{ uri }} style={{ width: T * 16, height: T * 16 }} />
+        <Walker name="person_side_walk" delay={0} size={T} row={8} />
+        <Walker name="tortellotto" delay={700} size={T * 0.85} row={8.1} />
+        <Walker name="person_side_walk_f" delay={5200} size={T} row={7} />
+        <Walker name="fanghino" delay={5900} size={T * 0.85} row={7.1} />
+      </Animated.View>
+    </View>
+  );
+}

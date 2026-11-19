@@ -8,13 +8,21 @@ import { colors, FONT } from "@/src/theme";
 
 import { sfx, SfxName } from "./audio";
 import { FX_LABEL, ITEMS, ItemId, MOVES, SPECIES, TypeId, TYPES } from "./data";
-import { HealFx, HitFx } from "./BattleFx";
-import { applyItem, attack, stageMult, catchChance, gainXp, knownMoves, Mon, monName, stats, xpReward } from "./engine";
+import { EvolveScene, HealFx, HitFx } from "./BattleFx";
+import { applyItem, attack, AttackOpts, stageMult, catchChance, gainXp, knownMoves, Mon, monName, stats, xpReward } from "./engine";
 import { Breathe } from "./Alive";
 import { battleSize, PixelSprite } from "./PixelSprite";
 import { hap, HpBar, PixelText } from "./ui";
+import { ATK_MULT, ChargeGauge, Grade, GUARD_MULT, TimedCommand } from "./BattleQte";
+import { Weather, WEATHER, WeatherLayer, weatherMult } from "./Weather";
 
-export type BattleSetup = { kind: "wild" | "trainer"; enemies: Mon[]; trainerName?: string; field?: "grass" | "beach"; duel?: boolean };
+export { weatherFor } from "./Weather";
+
+// Timed commands are off: attacks start as soon as you pick the move.
+let QTE_ON = false;
+const CHARGE_MAX = 3;
+
+export type BattleSetup = { kind: "wild" | "trainer"; enemies: Mon[]; trainerName?: string; field?: "grass" | "beach"; duel?: boolean; weather?: Weather; spot?: string };
 export type BattleResult = {
   outcome: "win" | "lose" | "flee" | "caught";
   party: Mon[];
@@ -38,7 +46,7 @@ function sfxFor(text: string): SfxName | null {
 type Fx = { target: "foe" | "me"; type: TypeId; dmg: number; crit: boolean; eff: number };
 type CondSnap = Record<string, { atk: number; def: number; spd: number; conf: number; burn: boolean }>;
 type Step = { text: string; php: number; ehp: number; ps?: string; fx?: Fx; conds?: CondSnap; anim?: "throw" | "caught" | "fail" | "heal" };
-type Phase = "msg" | "menu" | "moves" | "switch" | "forceSwitch" | "bag" | "itemTarget";
+type Phase = "msg" | "menu" | "moves" | "switch" | "forceSwitch" | "bag" | "itemTarget" | "qte";
 
 export function Battle({ setup, party: initialParty, items, onEnd }: { setup: BattleSetup; party: Mon[]; items: Partial<Record<ItemId, number>>; onEnd: (r: BattleResult) => void }) {
   const insets = useSafeAreaInsets();
@@ -97,6 +105,13 @@ export function Battle({ setup, party: initialParty, items, onEnd }: { setup: Ba
   }));
   const [fxShow, setFxShow] = useState<(Fx & { k: number }) | null>(null);
   const bobFoe = useAnimatedStyle(() => ({ opacity: foeO.value, transform: [{ scale: foeScale.value }, { translateY: bob.value * -4 }, { translateX: foeX.value }, { translateY: -Math.abs(foeX.value) * 0.6 }] }));
+  // A cromatico appears with a golden flash and sparkles.
+  useEffect(() => {
+    if (!E.current[0].shiny) return;
+    flashO.value = withDelay(350, withSequence(withTiming(0.8, { duration: 120 }), withTiming(0, { duration: 600 })));
+    sfx("evolve");
+    hap("success");
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const bobMe = useAnimatedStyle(() => ({ opacity: meO.value, transform: [{ translateY: (1 - bob.value) * -4 }, { translateX: meX.value }, { translateY: -Math.abs(meX.value) * 0.6 }] }));
   const flashStyle = useAnimatedStyle(() => ({ opacity: flashO.value }));
   const [act, setAct] = useState(() => Math.max(0, P.current.findIndex((m) => m.hp > 0)));
@@ -104,12 +119,24 @@ export function Battle({ setup, party: initialParty, items, onEnd }: { setup: Ba
   const [phase, setPhase] = useState<Phase>("msg");
   const [steps, setSteps] = useState<Step[]>(() => {
     const e = E.current[0];
-    const first = setup.kind === "wild" ? `Salta fuori un ${monName(e)} selvatico!` : `${setup.trainerName} ti sfida! Manda in campo ${monName(e)}!`;
+    const first = setup.kind === "wild"
+      ? e.shiny ? `✨ Incredibile! Un ${monName(e)} CROMATICO! Non fartelo scappare!` : e.rare ? `Un ${monName(e)} raro, già evoluto! Che fortuna!` : `Salta fuori un ${monName(e)} selvatico!`
+      : `${setup.trainerName} ti sfida! Manda in campo ${monName(e)}!`;
     const me = P.current[Math.max(0, P.current.findIndex((m) => m.hp > 0))];
-    return [{ text: first, php: me.hp, ehp: e.hp }, { text: `Vai, ${monName(me)}!`, php: me.hp, ehp: e.hp }];
+    const intro = [{ text: first, php: me.hp, ehp: e.hp }];
+    if (setup.weather) intro.push({ text: WEATHER[setup.weather].intro, php: me.hp, ehp: e.hp });
+    return [...intro, { text: `Vai, ${monName(me)}!`, php: me.hp, ehp: e.hp }];
   });
   const [si, setSi] = useState(0);
   const afterMsgs = useRef<() => void>(() => setPhase("menu"));
+  const charge = useRef(0);
+  const [qte, setQte] = useState<{ mv: string; special: boolean } | null>(null);
+  const [qteOn, setQteOn] = useState(QTE_ON);
+  const wx = setup.weather;
+  // Weather and timing turn into attack modifiers.
+  const optsFor = (mv: string, mult = 1, extra: AttackOpts = {}): AttackOpts => ({
+    mult: mult * weatherMult(wx, MOVES[mv].type), accMod: wx ? WEATHER[wx].accMod : 0, ...extra,
+  });
   const [, force] = useState(0);
 
   const me = P.current[act];
@@ -131,6 +158,15 @@ export function Battle({ setup, party: initialParty, items, onEnd }: { setup: Ba
   };
 
   const cur = phase === "msg" ? steps[si]?.text : null;
+  // Evolution: the scene starts on "si sta evolvendo" and stays for the "è diventato" line.
+  const [evo, setEvo] = useState<{ from: string; to: string; k: number } | null>(null);
+  useEffect(() => {
+    if (cur && /si sta evolvendo/.test(cur)) {
+      const to = steps.slice(si + 1).find((x) => /è diventato/.test(x.text))?.ps;
+      const from = steps[si]?.ps ?? P.current[act].s;
+      if (to && to !== from) setEvo({ from, to, k: Date.now() });
+    } else if (!cur || !/è diventato/.test(cur)) setEvo(null);
+  }, [cur, si]); // eslint-disable-line react-hooks/exhaustive-deps
   const curFx = phase === "msg" ? steps[si]?.fx : undefined;
   useEffect(() => {
     if (!cur) return;
@@ -176,12 +212,21 @@ export function Battle({ setup, party: initialParty, items, onEnd }: { setup: Ba
     if (si < steps.length - 1) setSi(si + 1);
     else afterMsgs.current();
   };
+  // Keyboard on computers: Z / Enter / Space moves the battle text on.
+  const advRef = useRef<(() => void) | null>(null);
+  advRef.current = phase === "msg" ? advance : null;
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.addEventListener) return;
+    const on = (e: KeyboardEvent) => { if (!e.repeat && ["z", "Z", "Enter", " "].includes(e.key) && advRef.current) { e.preventDefault(); advRef.current(); } };
+    window.addEventListener("keydown", on);
+    return () => window.removeEventListener("keydown", on);
+  }, []);
 
   // Build steps of one attack while tracking HP snapshots.
   const snap = (list: Step[], text: string, a = act, e = ei) =>
     list.push({ text, php: P.current[a].hp, ehp: E.current[e].hp, conds: JSON.parse(JSON.stringify(cond.current)) });
 
-  const hit = (list: Step[], att: Mon, def: Mon, mv: string, target: "foe" | "me", a: number, prefix = "") => {
+  const hit = (list: Step[], att: Mon, def: Mon, mv: string, target: "foe" | "me", a: number, prefix = "", opts: AttackOpts = {}) => {
     const ca = cnd(att.uid), cd = cnd(def.uid);
     if (ca.conf > 0) {
       ca.conf -= 1;
@@ -196,7 +241,7 @@ export function Battle({ setup, party: initialParty, items, onEnd }: { setup: Ba
       if (ca.conf === 0) snap(list, `${monName(att)} si è ripreso dalla confusione!`, a);
     }
     const before = def.hp;
-    const lines = attack(att, def, mv, prefix, ca.atk, cd.def);
+    const lines = attack(att, def, mv, prefix, ca.atk, cd.def, opts);
     const dmg = before - def.hp;
     lines.forEach((t, i) => {
       snap(list, t, a);
@@ -298,23 +343,51 @@ export function Battle({ setup, party: initialParty, items, onEnd }: { setup: Ba
     play(list, () => setPhase("menu"));
   };
 
-  const enemyTurn = (list: Step[], a: number) => {
+  const enemyTurn = (list: Step[], a: number, guard: Grade = "mancato") => {
     const foeNow = E.current[ei];
     const moves = knownMoves(foeNow);
     const mv = moves[Math.floor(Math.random() * moves.length)];
-    hit(list, foeNow, P.current[a], mv, "me", a, setup.kind === "wild" ? "Selvatico · " : "Nemico · ");
+    if (guard === "perfetto") snap(list, `Parata perfetta! ${monName(P.current[a])} attutisce il colpo.`, a);
+    if (guard === "buono") snap(list, `${monName(P.current[a])} para in parte il colpo.`, a);
+    hit(list, foeNow, P.current[a], mv, "me", a, setup.kind === "wild" ? "Selvatico · " : "Nemico · ", optsFor(mv, GUARD_MULT[guard]));
   };
 
-  const doMove = (mv: string) => {
+  // The strongest move this Mostrello knows: used by the special attack.
+  const bestMove = (m: Mon) => knownMoves(m).reduce((b, x) => (MOVES[x].power > MOVES[b].power ? x : b));
+
+  const doMove = (mv: string, special = false) => {
     hap("heavy");
+    if (qteOn) {
+      setQte({ mv, special });
+      setPhase("qte");
+      return;
+    }
+    runMove(mv, "mancato", "mancato", special);
+  };
+
+  const runMove = (mv: string, atk: Grade, guard: Grade, special: boolean) => {
+    setQte(null);
     const list: Step[] = [];
-    const meFirst = effSpd(me) >= effSpd(foe);
+    if (special) charge.current = 0;
+    const mine = () => {
+      const before = foe.hp;
+      if (special) snap(list, `${monName(me)} scatena il COLPO EMILIANO!`);
+      else if (atk === "perfetto") snap(list, "Tempismo perfetto!");
+      else if (atk === "buono") snap(list, "Buon tempismo!");
+      hit(list, me, foe, mv, "foe", act, "", optsFor(mv, ATK_MULT[atk] * (special ? 1.8 : 1), {
+        sure: special, critBoost: special ? 0.5 : atk === "perfetto" ? 0.15 : 0,
+      }));
+      // Charge fills by itself: one point per hit that lands, two for a big hit.
+      const dealt = before - foe.hp;
+      if (!special && dealt > 0) charge.current = Math.min(CHARGE_MAX, charge.current + 1 + (dealt >= foeMax * 0.3 ? 1 : 0));
+    };
+    const meFirst = special || effSpd(me) >= effSpd(foe);
     if (meFirst) {
-      hit(list, me, foe, mv, "foe", act);
-      if (foe.hp > 0 && me.hp > 0) enemyTurn(list, act);
+      mine();
+      if (foe.hp > 0 && me.hp > 0) enemyTurn(list, act, guard);
     } else {
-      enemyTurn(list, act);
-      if (me.hp > 0 && foe.hp > 0) hit(list, me, foe, mv, "foe", act);
+      enemyTurn(list, act, guard);
+      if (me.hp > 0 && foe.hp > 0) mine();
     }
     resolve(list, act, ei);
   };
@@ -411,12 +484,12 @@ export function Battle({ setup, party: initialParty, items, onEnd }: { setup: Ba
     <Animated.View entering={FadeIn.duration(250)} style={[styles.root, { paddingTop: insets.top + 8 }]} testID="battle-screen">
       <Animated.View style={[styles.scene, sceneStyle]} onLayout={(e) => setScene({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
         <LinearGradient
-          colors={setup.field === "beach" ? ["#7fc8e0", "#bfe6ef", "#f0d9a0"] : ["#9fd0a0", "#5f9a4e", "#2f5d34"]}
+          colors={setup.field === "beach" ? ["#1fb2ff", "#8fe6ff", "#ffe27a"] : ["#3cc3ff", "#a8f07a", "#22a94a"]}
           style={StyleSheet.absoluteFill}
         />
         <View style={styles.foeRow}>
           <View style={styles.infoBox} testID="battle-enemy-info">
-            <PixelText style={styles.monName} numberOfLines={1}>{monName(foe)}</PixelText>
+            <PixelText style={styles.monName} numberOfLines={1}>{foe.shiny ? "✨" : ""}{monName(foe)}</PixelText>
             <PixelText style={styles.lv}>Lv{foe.lv} · {TYPES[SPECIES[foe.s].type].name}</PixelText>
             <HpBar hp={ehp} max={foeMax} testID="battle-enemy-hp" />
             {chips(foe, "battle-enemy-status", showing?.conds)}
@@ -424,7 +497,7 @@ export function Battle({ setup, party: initialParty, items, onEnd }: { setup: Ba
           <View style={styles.spriteWrap}>
             <View style={[styles.ground, setup.field === "beach" && styles.groundBeach]} />
             <Animated.View style={bobFoe}>
-              <Breathe size={battleSize(foe.s, 112)}><PixelSprite name={foe.s} size={battleSize(foe.s, 112)} testID="battle-enemy-sprite" /></Breathe>
+              <Breathe size={battleSize(foe.s, 112)}><PixelSprite name={foe.s} size={battleSize(foe.s, 112)} shiny={foe.shiny} testID="battle-enemy-sprite" /></Breathe>
             </Animated.View>
             {fxShow?.target === "foe" && <HitFx key={fxShow.k} type={fxShow.type} dmg={fxShow.dmg} crit={fxShow.crit} eff={fxShow.eff} />}
           </View>
@@ -433,7 +506,7 @@ export function Battle({ setup, party: initialParty, items, onEnd }: { setup: Ba
           <View style={styles.spriteWrap}>
             <View style={[styles.ground, setup.field === "beach" && styles.groundBeach]} />
             <Animated.View style={bobMe}>
-              <Breathe size={battleSize(showing?.ps ?? me.s, 120)} delay={550}><PixelSprite name={showing?.ps ?? me.s} size={battleSize(showing?.ps ?? me.s, 120)} flip testID="battle-player-sprite" /></Breathe>
+              <Breathe size={battleSize(showing?.ps ?? me.s, 120)} delay={550}><PixelSprite name={showing?.ps ?? me.s} size={battleSize(showing?.ps ?? me.s, 120)} shiny={me.shiny} flip testID="battle-player-sprite" /></Breathe>
             </Animated.View>
             {fxShow?.target === "me" && <HitFx key={fxShow.k} type={fxShow.type} dmg={fxShow.dmg} crit={fxShow.crit} eff={fxShow.eff} />}
           </View>
@@ -455,7 +528,14 @@ export function Battle({ setup, party: initialParty, items, onEnd }: { setup: Ba
             <HealFx key={healK} label="+PV" />
           </View>
         )}
+        <WeatherLayer weather={wx} w={scene.w} h={scene.h} />
+        {wx && (
+          <View pointerEvents="none" style={styles.wxTag} testID="battle-weather-tag">
+            <PixelText style={styles.wxTxt}>{WEATHER[wx].label}</PixelText>
+          </View>
+        )}
         <Animated.View pointerEvents="none" style={[styles.flash, flashStyle]} />
+        {evo && <EvolveScene key={evo.k} from={evo.from} to={evo.to} size={140} Sprite={(p) => <PixelSprite name={p.name} size={p.size} silhouette={p.silhouette} />} />}
       </Animated.View>
 
       <View style={[styles.panel, { paddingBottom: insets.bottom + 12 }]}>
@@ -465,9 +545,20 @@ export function Battle({ setup, party: initialParty, items, onEnd }: { setup: Ba
             <PixelText style={styles.next}>▼</PixelText>
           </Pressable>
         )}
+        {phase === "qte" && qte && (
+          <TimedCommand
+            key={`${qte.mv}-${steps.length}-${si}`}
+            moveName={qte.special ? "COLPO EMILIANO" : MOVES[qte.mv].name}
+            guard
+            onDone={(a, g) => runMove(qte.mv, a, g, qte.special)}
+          />
+        )}
         {phase === "menu" && (
           <Animated.View entering={SlideInDown.duration(180)}>
-            <PixelText style={styles.prompt}>Cosa deve fare {monName(me)}?</PixelText>
+            <View style={styles.promptRow}>
+              <PixelText style={[styles.prompt, { flex: 1 }]}>Cosa deve fare {monName(me)}?</PixelText>
+            </View>
+            <ChargeGauge value={charge.current} max={CHARGE_MAX} />
             <View style={styles.grid}>
               <Cmd label="Lotta" color={colors.brandPrimary} fg={colors.onBrandPrimary} testID="battle-cmd-fight" onPress={() => setPhase("moves")} />
               <Cmd label="Zaino" color={colors.brandSecondary} fg={colors.onBrandSecondary} testID="battle-cmd-bag" onPress={() => setPhase("bag")} />
@@ -478,6 +569,12 @@ export function Battle({ setup, party: initialParty, items, onEnd }: { setup: Ba
         )}
         {phase === "moves" && (
           <Animated.View entering={SlideInDown.duration(180)}>
+            {charge.current >= CHARGE_MAX && (
+              <Pressable testID="battle-special" onPress={() => doMove(bestMove(me), true)} style={({ pressed }) => [styles.special, pressed && { opacity: 0.8 }]}>
+                <PixelText style={styles.specialTxt}>★ COLPO EMILIANO ★</PixelText>
+                <PixelText style={styles.specialSub}>{MOVES[bestMove(me)].name} potenziata, colpisce sempre</PixelText>
+              </Pressable>
+            )}
             <View style={styles.grid}>
               {knownMoves(me).map((mv) => {
                 const m = MOVES[mv];
@@ -582,9 +679,9 @@ function Cmd({ label, color, fg, onPress, testID }: { label: string; color: stri
 const styles = StyleSheet.create({
   root: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.surface },
   scene: { flex: 1, justifyContent: "space-around", paddingHorizontal: 16, overflow: "hidden" },
-  groundBeach: { backgroundColor: "#d9bf86" },
+  groundBeach: { backgroundColor: "#f2bd52", borderColor: "#c98f22" },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 4 },
-  chip: { paddingHorizontal: 4, paddingVertical: 1, borderWidth: 1, borderColor: colors.onSurface },
+  chip: { paddingHorizontal: 4, paddingVertical: 1, borderRadius: 14, borderWidth: 1, borderColor: colors.borderStrong },
   chipTxt: { fontSize: 11, color: colors.onBrandPrimary },
   fxHint: { fontSize: 11, color: colors.muted, marginTop: 2 },
   flash: { ...StyleSheet.absoluteFillObject, backgroundColor: "#fff8e1" },
@@ -592,24 +689,32 @@ const styles = StyleSheet.create({
   healSpot: { position: "absolute", left: 0, bottom: 20, width: 180, height: 180 },
   foeRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   meRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  infoBox: { width: "48%", backgroundColor: colors.surfaceSecondary, borderWidth: 2, borderColor: colors.onSurface, padding: 8, gap: 4 },
+  infoBox: { width: "48%", backgroundColor: colors.surfaceSecondary, borderRadius: 14, borderWidth: 2, borderColor: colors.borderStrong, padding: 10, gap: 4, shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 6, elevation: 3 },
   monName: { fontSize: 15, color: colors.onSurface },
   lv: { fontSize: 12, color: colors.muted },
   hpText: { fontSize: 12, color: colors.onSurfaceSecondary, textAlign: "right" },
   spriteWrap: { alignItems: "center", justifyContent: "flex-end" },
-  ground: { position: "absolute", bottom: -6, width: 130, height: 22, borderRadius: 999, backgroundColor: "#24482a" },
-  panel: { backgroundColor: colors.surface, borderTopWidth: 4, borderTopColor: colors.onSurface, padding: 12, minHeight: 200 },
-  msgBox: { minHeight: 150, borderWidth: 2, borderColor: colors.onSurface, backgroundColor: colors.surfaceSecondary, padding: 16, justifyContent: "space-between" },
+  ground: { position: "absolute", bottom: -6, width: 130, height: 22, borderRadius: 999, backgroundColor: "#167a34", borderWidth: 2, borderColor: "#0f5a25" },
+  panel: { backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -20, padding: 14, minHeight: 200 },
+  msgBox: { minHeight: 150, borderRadius: 18, borderWidth: 2, borderColor: colors.borderStrong, backgroundColor: colors.surfaceSecondary, padding: 16, justifyContent: "space-between" },
   msg: { fontSize: 16, lineHeight: 24 },
   next: { alignSelf: "flex-end", color: colors.brandSecondary },
   prompt: { fontSize: 14, color: colors.muted, marginBottom: 8 },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  cmd: { width: "48.5%", height: 64, borderWidth: 2, borderColor: colors.onSurface, borderBottomWidth: 4, alignItems: "center", justifyContent: "center", borderRadius: 2 },
+  cmd: { width: "48.5%", height: 64, borderBottomWidth: 4, borderColor: "rgba(0,0,0,0.28)", alignItems: "center", justifyContent: "center", borderRadius: 18 },
   cmdTxt: { fontSize: 15, textTransform: "uppercase", letterSpacing: 1 },
-  move: { width: "48.5%", minHeight: 64, borderWidth: 2, borderColor: colors.borderStrong, borderLeftWidth: 8, backgroundColor: colors.surfaceSecondary, padding: 8, justifyContent: "center" },
+  move: { width: "48.5%", minHeight: 64, borderRadius: 14, borderWidth: 1, borderColor: colors.border, borderLeftWidth: 6, backgroundColor: colors.surfaceSecondary, padding: 10, justifyContent: "center" },
   moveName: { fontSize: 13, fontFamily: FONT },
   moveMeta: { fontSize: 11, marginTop: 2 },
   back: { marginTop: 8, minHeight: 44, justifyContent: "center" },
+  promptRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  qteToggle: { minHeight: 32, paddingHorizontal: 8, justifyContent: "center", borderRadius: 14, borderWidth: 1, borderColor: colors.border, marginBottom: 8 },
+  qteToggleTxt: { fontSize: 11, color: colors.brandSecondary },
+  special: { minHeight: 56, marginBottom: 8, borderRadius: 14, borderWidth: 2, borderColor: colors.borderStrong, borderBottomWidth: 4, backgroundColor: "#f2c94c", alignItems: "center", justifyContent: "center", padding: 6 },
+  specialTxt: { fontSize: 15, color: "#1a1a1a", letterSpacing: 1 },
+  specialSub: { fontSize: 10, color: "#1a1a1a" },
+  wxTag: { position: "absolute", top: 4, alignSelf: "center", paddingHorizontal: 8, paddingVertical: 2, backgroundColor: "rgba(0,0,0,0.45)" },
+  wxTxt: { fontSize: 11, color: "#ffffff" },
   backTxt: { color: colors.brandSecondary },
-  swRow: { flexDirection: "row", alignItems: "center", gap: 12, padding: 8, borderWidth: 1, borderColor: colors.border, marginBottom: 6, backgroundColor: colors.surfaceSecondary },
+  swRow: { flexDirection: "row", alignItems: "center", gap: 12, padding: 8, borderRadius: 14, borderWidth: 1, borderColor: colors.border, marginBottom: 6, backgroundColor: colors.surfaceSecondary },
 });

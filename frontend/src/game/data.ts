@@ -1,5 +1,13 @@
 // All game content is original: creatures, places-as-maps, characters and texts.
 import { linkExpansion, X_BADGES, X_MAPS, X_MOVES, X_SPECIES } from "./expansion";
+import { buildWorld, W_BADGES } from "./world";
+import { buildSpecies, extraSpecies } from "./bestiary";
+import { N_MOVES, typeMovesets } from "./movesets";
+import { buildTowns, type Quest } from "./towns";
+import { placeStory } from "./story";
+import { buildGyms } from "./gyms";
+import { buildSecrets } from "./secrets";
+import { buildBoutiques } from "./outfits";
 export type TypeId = "sugo" | "campi" | "terme" | "motore" | "nebbia" | "chiacchiera";
 
 export const TYPES: Record<TypeId, { name: string; color: string }> = {
@@ -57,6 +65,7 @@ export const MOVES: Record<string, Move> = {
   nebbiafitta: { name: "Nebbia Fitta", type: "nebbia", power: 60, acc: 95, fx: { k: "selfDefUp", p: 30 } },
   ombra: { name: "Ombra di Prima Fila", type: "campi", power: 70, acc: 95, fx: { k: "selfDefUp", p: 40 } },
   ...X_MOVES,
+  ...N_MOVES,
 };
 
 export type Species = {
@@ -114,6 +123,12 @@ export const SPECIES_LIST: Species[] = [
   sp({ id: "zuppissima", num: 0, name: "Zuppissima", type: "chiacchiera", hp: 90, atk: 75, def: 82, spd: 58, catchRate: 0.15, moves: [["sberla", 1], ["pettegolezzo", 8], ["chiacchierata", 14], ["lamentela", 20]], desc: "Zuppa inglese a dieci strati con alchermes doppio. Sa i segreti di ogni paese." }),
   ...X_SPECIES,
 ];
+// New regional Mostrelli (bestiary.ts): learnsets from the existing moves of their type, weakest first.
+const MOVES_BY_TYPE: Record<string, string[]> = {};
+Object.entries(MOVES).sort((a, b) => a[1].power - b[1].power).forEach(([id, m]) => { if (id !== "sberla") (MOVES_BY_TYPE[m.type] ??= []).push(id); });
+SPECIES_LIST.push(...buildSpecies(MOVES_BY_TYPE), ...extraSpecies());
+// Every Mostrello learns only moves of its own type (movesets.ts).
+typeMovesets(SPECIES_LIST, MOVES);
 SPECIES_LIST.forEach((x, i) => (x.num = i + 1));
 export const SPECIES: Record<string, Species> = Object.fromEntries(SPECIES_LIST.map((s) => [s.id, s]));
 export const STARTERS = ["tortellotto", "fanghino", "grappolino"];
@@ -129,19 +144,27 @@ export const ITEMS = {
 } as const;
 export type ItemId = keyof typeof ITEMS;
 
-export const BLOCKING = new Set(["T", "W", "R", "H", "D", "B", "S", "O", "U", "X", "K", "M", "N", "J"]);
+export const BLOCKING = new Set(["T", "W", "R", "H", "D", "B", "S", "O", "U", "X", "K", "M", "N", "J", "I", "=", "%", "&", "^", "!"]);
 export const ENCOUNTER_TILES = new Set(["G", "Q"]);
 
 export type Npc = {
   id: string; x: number; y: number; name: string;
   look: { A: string; C: string };
-  kind: "talk" | "heal" | "shop" | "trainer" | "boss";
+  kind: "talk" | "heal" | "shop" | "trainer" | "boss" | "quest" | "gym" | "wild" | "gift" | "outfit";
   lines: string[];
   team?: [string, number][];
   reward?: number;
   badge?: string;
   after?: string[];
   prize?: [string, number];
+  /** Side quest given by this person. */
+  quest?: Quest;
+  /** Main story: this trainer appears only during that chapter. */
+  story?: number;
+  /** Doorman of a gym: the hall it leads to. */
+  gym?: string;
+  /** A special wild Mostrello waiting in a secret corner (fight it to catch it). */
+  mon?: { s: string; lv: number; shiny?: boolean };
 };
 
 export type GameMap = {
@@ -153,6 +176,15 @@ export type GameMap = {
   npcs: Npc[];
   signs: Record<string, string>;
   pickups?: { id: string; x: number; y: number; item: ItemId }[];
+  /** Province code (BO, MO...), terrain of generated places, comune of a frazione, battle backdrop. */
+  prov?: string;
+  terrain?: "c" | "p" | "h" | "a" | "m" | "f";
+  fraz?: string;
+  field?: "grass" | "beach";
+  /** Inside a building (no weather, no clouds, not listed on the world map). */
+  interior?: boolean;
+  /** A gym hall (reached by talking to its doorman). */
+  gym?: boolean;
 };
 
 const L = (A: string, C: string) => ({ A, C });
@@ -171,7 +203,7 @@ export const MAPS: Record<string, GameMap> = {
     wild: [["mortazzone", 3, 5, 3], ["umarellino", 3, 5, 3], ["squacquerone", 3, 5, 3], ["portichino", 6, 6, 1], ["crescentino", 3, 5, 2], ["canalino", 5, 5, 1]],
     signs: { "4,9": "BOLOGNA: la Dotta, la Grassa, la Rossa. E da qualche anno anche la Cara (vedi affitti)." },
     npcs: [
-      { id: "bo_balanzone", x: 4, y: 7, name: "Dottor Balanzone", look: L("#1a1a1a", "#1a1a1a"), kind: "talk", lines: ["Ah, il mio apprendista! Ricorda: l'Università di Bologna è la più antica del mondo occidentale. Te l'ho già detto? Te lo ridico.", "Cinque Capi comandano queste terre: Bologna, Osteria Grande, Castel San Pietro, Imola e Ferrara. Battili tutti e sarai Campione dell'Emilia!", "O almeno avrai qualcosa da raccontare al bar per i prossimi trent'anni."] },
+      { id: "bo_balanzone", x: 4, y: 7, name: "Prof. Albe", look: L("#4e2e18", "#263238"), kind: "talk", lines: ["Eccoti! Ricorda: ogni provincia ha i suoi Mostrelli, i suoi piatti e il suo dialetto. Esplorale tutte!", "Se ti perdi, guarda l'obiettivo in alto: ti dico sempre io dove andare.", "E se trovi qualcuno della Banda della Panna... fagli vedere chi comanda in Emilia-Romagna!"] },
       { id: "bo_sfoglina", x: 2, y: 12, name: "Sfoglina Rosanna", look: L("#ffffff", "#c0392b"), kind: "heal", lines: ["Ma guarda come sei sciupato! Siediti che ti faccio i tortellini. In brodo, ovvio.", "Con la panna? Ma sei matto? Ti caccio di casa a mattarellate!", "Ecco, la tua squadra è tornata in forma. Mangia, che sei pelle e ossa."] },
       { id: "bo_bottega", x: 13, y: 3, name: "Bottegaio del Quadrilatero", look: L("#ffffff", "#7b4a2a"), kind: "shop", lines: ["Benvenuto in bottega! Prezzi da centro storico, sorrisi da centro storico. Cosa ti serve?"] },
       { id: "bo_studente", x: 8, y: 7, name: "Studente Fuorisede", look: L("#2e7d32", "#616161"), kind: "trainer", lines: ["Pago 600 euro per un posto letto in doppia con tre coinquilini. Ho bisogno di vincere QUALCOSA nella vita!"], team: [["squacquerone", 3]], reward: 60, after: ["Ho perso pure questa. Torno in Piazza Verdi a fare l'aperitivo... a 9 euro lo spritz. Che città."] },
@@ -310,11 +342,26 @@ export const MAPS: Record<string, GameMap> = {
 
 Object.assign(MAPS, X_MAPS);
 linkExpansion(MAPS);
+buildWorld(MAPS, SPECIES_LIST);
+MAPS.acetaia.interior = true;
+MAPS.mercato.interior = true;
+buildSecrets(MAPS, SPECIES_LIST);
+buildTowns(MAPS, SPECIES_LIST);
+placeStory(MAPS);
+buildGyms(MAPS, SPECIES_LIST);
+buildBoutiques(MAPS);
+if (MAPS.predappio__palestra) MAPS.predappio__palestra.music = "duc";
+if (MAPS.predappio__3_3) MAPS.predappio__3_3.name = "Chiesa di Sant'Antonio";
+if (MAPS.predappio__7_13) {
+  MAPS.predappio__7_13.name = "Bottega dei Souvenir";
+  const p0 = MAPS.predappio__7_13.npcs.find((n) => n.kind === "talk");
+  if (p0) p0.lines = ["Calamite, tazze, magliette, accendini... qui si vende proprio di tutto.", "Il buon gusto, purtroppo, l'abbiamo finito anni fa."];
+}
 
-export const ALL_BADGES = ["Sigillo del Cantiere", "Sigillo della Via Emilia", "Sigillo delle Terme", "Sigillo del Rombo", "Sigillo Estense", "Sigillo dell'Ombrellone", ...X_BADGES];
+export const ALL_BADGES = ["Sigillo del Cantiere", "Sigillo della Via Emilia", "Sigillo delle Terme", "Sigillo del Rombo", "Sigillo Estense", "Sigillo dell'Ombrellone", ...X_BADGES, ...W_BADGES];
 
 export const INTRO_LINES = [
-  "Benvenuto! Io sono il Dottor Balanzone, luminare dell'Università più antica del mondo. Sì, lo ripeto spesso.",
-  "Queste terre, tra Bologna, Osteria Grande, Castel San Pietro, Imola e Ferrara, sono piene di MOSTRELLI: creature strane, golose e chiacchierone.",
-  "Prima di partire, però, dimmi come ti chiami.",
+  "Ciao! Io sono il Prof. Albe, e studio i MOSTRELLI: creature strane, golose e chiacchierone.",
+  "Ne trovi in tutta l'Emilia-Romagna, da Piacenza a Rimini, dalle valli del Po all'Appennino. Ogni zona ha i suoi.",
+  "Ti accompagnerò in tutta l'avventura. Prima però dimmi chi sei: poi andiamo in trattoria, che ti ho preparato una sorpresa!",
 ];

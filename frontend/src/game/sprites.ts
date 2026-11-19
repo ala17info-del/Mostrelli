@@ -1,4 +1,5 @@
 import { X_SPRITES } from "./expansion";
+import { N_SPRITES } from "./bestiary";
 
 // Original 12x12 pixel art. '.' = transparent.
 export const PAL: Record<string, string> = {
@@ -167,4 +168,29 @@ export const SPRITES: Record<string, string[]> = {
     "..kkCCCCkk..", ".khCCCCCChk.", ".khCCCCCChk.", "..kSSSSSSk..", "..kSk..kSk..", "..kkk..kkk..",
   ],
   ...X_SPRITES,
+  ...N_SPRITES,
+  // Zio DUC: a big bald head, jutting chin, black jacket buttoned up to the neck, hands on the hips.
+  zio_duc: [
+    "...kkkkkk...", "..khhhhhhk..", ".khhhhhhhhk.", ".khnnhhnnhk.", ".khhhhhhhhk.", ".khhkkkkhhk.",
+    "..khhhhhhk..", ".knnnwwnnnk.", "khknnnnnnkhk", "khknnnnnnkhk", "..knnnnnnk..", "..kkk..kkk..",
+  ],
+  // Prof. Albe: short dark hair with a faux-hawk, beard, black tank top, wooden bead necklace,
+  // an earring and a metal watch.
+  prof_albe: [
+    "....kkkk....", "...kBBBBk...", "..kBBBBBBk..", "..khhhhhhk..", "..khnhhnhkc.", "..kBhhhhBk..",
+    "..kkBttBkk..", ".khbnbnbnhk.", "khhnnnnnnhhk", "khhnnnnnnhsk", "..knnnnnnk..", "..kkk..kkk..",
+  ],
 };
+
+// Female player: long hair framing the face, no cap, pink top. Built from the male drawings.
+function femalize(g: string[]): string[] {
+  return g.map((row, y) => {
+    const r = row.replace(/A/g, "B").replace(/C/g, "P").split("");
+    if (y >= 3 && y <= 7) {
+      const i = r.indexOf("k"), j = r.lastIndexOf("k");
+      if (i > 0 && j < r.length - 1 && i < j) { r[i] = "B"; r[j] = "B"; r[i - 1] = "k"; r[j + 1] = "k"; }
+    }
+    return r.join("");
+  });
+}
+for (const n of ["person", "person_walk", "person_back", "person_back_walk", "person_side", "person_side_walk"]) SPRITES[`${n}_f`] = femalize(SPRITES[n]);

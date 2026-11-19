@@ -2,10 +2,10 @@
 // same seed from the server, so they reach the same result without the server knowing the rules.
 // pvp: host vs guest. coop: host + guest together against a trainer/boss team ("boss" side).
 import { ITEMS, ItemId, MOVES, TypeId } from "./data";
-import { applyItem, attack, knownMoves, Mon, monName, stageMult, stats } from "./engine";
+import { applyItem, ATK_MULT, attack, Grade, GUARD_MULT, knownMoves, Mon, monName, stageMult, stats } from "./engine";
 
 export type Side = "host" | "guest" | "boss";
-export type LiveAct = { kind: "move" | "switch" | "item" | "pass"; move?: string; idx?: number; item?: ItemId };
+export type LiveAct = { kind: "move" | "switch" | "item" | "pass"; move?: string; idx?: number; item?: ItemId; grade?: Grade; guard?: Grade };
 export type TurnEntry = { turn: number; host: LiveAct; guest: LiveAct; seed: number };
 type Cond = { atk: number; def: number; spd: number; conf: number; burn: boolean };
 export type DuelState = {
@@ -118,7 +118,13 @@ function run(st: DuelState, e: TurnEntry, names: Record<Side, string>): DLine[] 
       if (ca.conf === 0) push(`${monName(att)} si è ripreso dalla confusione!`);
     }
     const before = def.hp;
-    const lines = attack(att, def, mv, `${names[s]} · `, ca.atk, cd.def);
+    // Timed commands travel with the sealed actions, so both phones apply the same multipliers.
+    const grade = s === "boss" ? undefined : e[s as Player].grade;
+    const guard = o === "boss" ? undefined : e[o as Player].guard;
+    if (grade === "perfetto") push(`${names[s]}: tempismo perfetto!`);
+    if (guard === "perfetto") push(`${names[o]} para alla perfezione!`);
+    const mult = (grade ? ATK_MULT[grade] : 1) * (guard ? GUARD_MULT[guard] : 1);
+    const lines = attack(att, def, mv, `${names[s]} · `, ca.atk, cd.def, { mult, critBoost: grade === "perfetto" ? 0.15 : 0 });
     const dmg = before - def.hp;
     lines.forEach((t, i) => {
       const fx = i === 0 && dmg > 0

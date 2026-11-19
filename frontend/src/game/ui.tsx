@@ -1,12 +1,33 @@
 import * as Haptics from "expo-haptics";
-import React from "react";
+import React, { useEffect } from "react";
 import { Platform, Pressable, StyleSheet, Text, View, ViewStyle } from "react-native";
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from "react-native-reanimated";
 
 import { colors, FONT } from "@/src/theme";
 
+// Web vibration. Android: the Vibration API. iPhone (Safari, iOS 18 and later): there is no vibration
+// API, but toggling a "switch" checkbox makes a light tap. A hidden one is added, clicked and removed
+// each time, the same way the libraries known to work on iPhone do it.
+function webTap(ms: number) {
+  try {
+    const nav = navigator as any;
+    if (typeof nav.vibrate === "function" && nav.vibrate(ms)) return;
+    if (typeof document === "undefined") return;
+    const label = document.createElement("label");
+    label.setAttribute("aria-hidden", "true");
+    label.style.display = "none";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.setAttribute("switch", "");
+    label.appendChild(input);
+    document.head.appendChild(label);
+    label.click();
+    document.head.removeChild(label);
+  } catch {}
+}
+
 export function hap(kind: "light" | "medium" | "heavy" | "success" | "error" | "selection") {
-  if (Platform.OS === "web") return;
+  if (Platform.OS === "web") return webTap(kind === "heavy" || kind === "error" ? 25 : kind === "medium" || kind === "success" ? 15 : 8);
   if (kind === "success") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   else if (kind === "error") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
   else if (kind === "selection") Haptics.selectionAsync();
@@ -48,19 +69,31 @@ export function RetroButton({ label, onPress, variant = "primary", testID, disab
 }
 
 // Game logo: gold letters with a thick dark outline and a red drop shadow, plus a ribbon.
+// One letter of the logo: outline, red drop shadow and gold face; hops in a wave with the others.
+function LogoLetter({ ch, i, base, o }: { ch: string; i: number; base: object; o: number }) {
+  const y = useSharedValue(0);
+  useEffect(() => {
+    y.value = withDelay(i * 110, withRepeat(withSequence(withTiming(-o * 3, { duration: 260, easing: Easing.out(Easing.quad) }), withTiming(0, { duration: 260, easing: Easing.in(Easing.quad) }), withTiming(0, { duration: 1600 })), -1));
+  }, [y, i, o]);
+  const st = useAnimatedStyle(() => ({ transform: [{ translateY: y.value }] }));
+  const ring: [number, number][] = [[-o, 0], [o, 0], [0, -o], [0, o], [-o, -o], [o, o], [-o, o], [o, -o]];
+  return (
+    <Animated.View style={st}>
+      <Text style={[base, { position: "absolute", left: o * 1.5, top: o * 1.5, color: "#c0392b" }]}>{ch}</Text>
+      {ring.map(([x, yy], k) => <Text key={k} style={[base, { position: "absolute", left: x, top: yy, color: "#1a0f08" }]}>{ch}</Text>)}
+      <Text style={[base, { color: "#ffd54f" }]}>{ch}</Text>
+    </Animated.View>
+  );
+}
+
 export function Logo({ size = 44, ribbon }: { size?: number; ribbon?: string }) {
   const t = "MOSTRELLI";
   const o = Math.max(2, Math.round(size / 14));
   const base = { fontFamily: FONT, fontSize: size, lineHeight: size * 1.2, letterSpacing: 2 };
-  const ring: [number, number][] = [[-o, 0], [o, 0], [0, -o], [0, o], [-o, -o], [o, o], [-o, o], [o, -o]];
   return (
     <View style={{ alignSelf: "flex-start" }}>
-      <View>
-        <Text style={[base, { position: "absolute", left: o * 1.5, top: o * 1.5, color: "#c0392b" }]}>{t}</Text>
-        {ring.map(([x, y], i) => (
-          <Text key={i} style={[base, { position: "absolute", left: x, top: y, color: "#1a0f08" }]}>{t}</Text>
-        ))}
-        <Text testID="title-text" style={[base, { color: "#ffd54f" }]}>{t}</Text>
+      <View testID="title-text" style={{ flexDirection: "row" }} accessibilityLabel={t}>
+        {t.split("").map((ch, i) => <LogoLetter key={i} ch={ch} i={i} base={base} o={o} />)}
       </View>
       {ribbon && (
         <View style={styles.ribbon}>
@@ -97,16 +130,20 @@ export function PixelText({ children, style, testID, numberOfLines }: { children
 const styles = StyleSheet.create({
   btn: {
     minHeight: 52,
-    paddingHorizontal: 16,
+    paddingHorizontal: 18,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 2,
-    borderColor: colors.onSurface,
-    borderRadius: 2,
+    borderRadius: 16,
     borderBottomWidth: 4,
+    borderBottomColor: "rgba(0,0,0,0.28)",
+    shadowColor: "#000",
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
   small: { minHeight: 44, paddingHorizontal: 12 },
-  shine: { position: "absolute", left: 2, right: 2, top: 2, height: 3, backgroundColor: "rgba(255,255,255,0.35)" },
+  shine: { position: "absolute", left: 10, right: 10, top: 5, height: 4, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.28)" },
   ribbon: { marginTop: 6, alignSelf: "flex-start", backgroundColor: "#c0392b", borderWidth: 2, borderColor: "#1a0f08", paddingHorizontal: 10, paddingVertical: 3, transform: [{ rotate: "-2deg" }] },
   ribbonTxt: { fontFamily: FONT, fontSize: 11, color: "#ffffff", letterSpacing: 2 },
   label: { fontFamily: FONT, fontSize: 15, letterSpacing: 1, textTransform: "uppercase" },

@@ -156,6 +156,9 @@ export const X_MAPS: Record<string, GameMap> = {
 
 // Which drawing each capopalestra / shopkeeper uses (everyone else is a regular person).
 export const NPC_SPRITES: Record<string, string> = {
+  bo_balanzone: "prof_albe",
+  predappio_capo: "zio_duc",
+  predappio_capo_balcone: "zio_duc",
   bo_gino: "boss_umarell", fe_contessa: "boss_contessa", og_loris: "boss_camionista", cs_ivonne: "boss_nonna", im_ivano: "boss_pilota",
   ri_romeo: "boss_romeo", ac_ferruccio: "boss_aceto", pa_duchessa: "boss_duchessa", ra_teodora: "boss_teodora",
   bo_bottega: "shop_apron", fe_fornaio: "shop_baker", cs_farmacia: "shop_glasses", cm_ferramenta: "shop_moustache", al_banco: "shop_straw",
